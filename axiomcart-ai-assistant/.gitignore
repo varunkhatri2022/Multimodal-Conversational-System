@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+.chroma/
+*.mp3
+*.wav
+.pytest_cache/
+uv.lock
+tests/

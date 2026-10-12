@@ -1,0 +1,17 @@
+# Secrets: never commit API keys
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Generated at runtime
+.chroma/
+*.mp3
+*.wav
+
+# Other course PDFs stay local
+/Roadmap_Week 5_SWEs.pdf
+/axiomcart-ai-assistant/instructor_guide/Multimodal_Conversational_System_Instructor_Guide.pdf
+/Agents-ChatGPT-Demo/Northstar_Policy_PA-204_FICTIONAL.pdf
