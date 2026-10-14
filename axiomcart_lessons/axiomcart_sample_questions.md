@@ -41,7 +41,7 @@ Keep an eye on the log lines `Orchestrator query=...`, `routing=[...]` and `HITL
 
 > The answers come from a real LLM, so wording changes between runs. "My order is late" (with no ID) is what makes the support agent ask. Rehearse it once before class.
 
-**Optional follow-up (memory, lesson 28):** after example 3, type `Which of those earbuds is cheapest?` The agents receive the earlier conversation through `build_context()`.
+**Optional follow-up (memory):** after example 3, type `Which of those earbuds is cheapest?` The agents receive the earlier conversation through `build_context()`.
 
 ## Example 4: Voice mode
 

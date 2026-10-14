@@ -40,8 +40,12 @@ def combine(state: TripState) -> dict:
 
 
 builder = StateGraph(TripState)
-for name, fn in [("flights", flights), ("hotels", hotels), ("chat", chat), ("combine", combine)]:
-    builder.add_node(name, fn)
+
+builder.add_node("flights", flights)
+builder.add_node("hotels", hotels)
+builder.add_node("chat", chat)
+builder.add_node("combine", combine)
+
 builder.add_conditional_edges(START, route, ["flights", "hotels", "chat"])
 builder.add_edge(["flights", "hotels"], "combine")  # join: waits for BOTH
 builder.add_edge("combine", END)

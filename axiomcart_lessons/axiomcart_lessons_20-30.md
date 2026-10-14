@@ -16,7 +16,6 @@ python axiomcart_lessons/axiomcart_20.py
 | [23](axiomcart_23.py) | Custom reducer that resets between turns | `agent_results_reducer` in `state.py` |
 | [26](axiomcart_26.py) | `interrupt()` / `Command(resume=...)` basics, node re-execution | `support_model`, `main.py` resume loop |
 | [27](axiomcart_27.py) | HITL inside a subgraph inside a parallel branch | `support_subgraph` + `support_agent()` |
-| [28](axiomcart_28.py) | What "memory" actually stores; giving the router context | `messages`, `build_context()`, `MemorySaver` |
 | [29](axiomcart_29.py) | Voice as an adapter: STT → graph → TTS ([speech models and pricing](axiomcart_29_speech_models.md)) | `voice.py`, `voice_loop()` |
 
 After lesson 29, move to the real project in `axiomcart-ai-assistant/src` (reading order below). To try it, use [axiomcart_sample_questions.md](axiomcart_sample_questions.md).
@@ -51,7 +50,7 @@ Each was confirmed by running the real `nodes.py`/`graph.py` with a stubbed LLM,
 1. **Code before `interrupt()` runs twice.** On resume, `support_agent` restarts, re-invokes the subgraph, and `support_model` calls the LLM again before `interrupt()` returns. The question the customer saw and the `AIMessage` kept in history come from different LLM calls (lesson 27).
 2. **Parallel siblings are not re-run on resume.** `product_agent` finished in the same step, so LangGraph kept its write. Only the interrupted branch re-executes (lesson 27).
 3. **The HITL trigger is a guess.** "No tool call and no tool used yet" is treated as "asking the customer". A support answer that needs no tool (for example, a shipping-policy question) is shown as `Agent asks: ...` and blocks the turn. The guess re-fires after every reply until a tool is called (`nodes.py`, `support_model`). A sturdier design is an explicit `ask_customer` tool.
-4. **Memory holds only customer turns.** Nothing appends the assistant's answer to `messages`. Also, the orchestrator classifies `user_query` with no history, although the README says it sees prior context (lesson 28).
+4. **Memory holds only customer turns.** Nothing appends the assistant's answer to `messages`. Also, the orchestrator classifies `user_query` with no history, although the README says it sees prior context (`nodes.py`, `build_context()`).
 5. **`Send("synthesizer", {})` gives the synthesizer an empty state.** That works here only because "no results" is the intended outcome (`nodes.py`, `orchestrator_node`).
 6. **The reset reducer is order-sensitive.** Any worker that returns `agent_results: []` wipes the results of its siblings (`state.py`, `agent_results_reducer`).
 7. **Price filters do not work through semantic search.** "Under ₹5,000" ranks expensive headphones first. Price is stored as metadata but never filtered on (`rag.py`, `tools.py`).

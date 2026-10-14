@@ -51,6 +51,8 @@ class AxiomCartAssistant:
         If the graph pauses for HITL (support agent needs order ID),
         this method collects user input and resumes the graph.
         """
+
+        print (f"\nMain User query: {text!r}")
         if input_fn is None:
             input_fn = lambda prompt: input(f"\n🔄 Agent asks: {prompt}\nYou: ").strip()
 

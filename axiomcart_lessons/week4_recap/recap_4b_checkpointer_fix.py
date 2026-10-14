@@ -49,4 +49,5 @@ if __name__ == "__main__":
     # ['answer to hotels there']   <- only this turn's answer
 
     # Memory is only as good as what nodes READ. A router that sees only the current
-    # query cannot resolve "there". Week 5 lesson 28 covers what AxiomCart stores.
+    # query cannot resolve "there". In AxiomCart, build_context() in nodes.py
+    # passes the history to the agents.
