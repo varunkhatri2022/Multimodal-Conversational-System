@@ -25,12 +25,14 @@ WEEK 4 RECAP: the building blocks
   R2   the tool loop: model <-> tools
   R3   orchestrator -> Send -> synthesizer
   R4   memory with a checkpointer (4a problem -> 4b fix)
+  QUIZ 1
 
 AXIOMCART PATTERNS: how the real app uses them
   L20 -> L21   tool loops in a fan-out break  ->  fix: subgraphs
   L22 -> L23   Command routing  ->  reset results every turn
   L26 -> L27   interrupt / resume  ->  inside a subgraph, in parallel
   L29          voice: speech-to-text -> graph -> text-to-speech
+  QUIZ 2
 
 AXIOMCART: everything together
   greeting -> product -> product + support with interrupt -> voice
@@ -41,5 +43,7 @@ AXIOMCART: everything together
 | Step | Files |
 | --- | --- |
 | Week 4 recap | [R1](axiomcart_lessons/week4_recap/recap_1_graph_basics.py) · [R2](axiomcart_lessons/week4_recap/recap_2_tool_loop.py) · [R3](axiomcart_lessons/week4_recap/recap_3_orchestrator_send.py) · [R4a](axiomcart_lessons/week4_recap/recap_4a_checkpointer_problem.py) · [R4b](axiomcart_lessons/week4_recap/recap_4b_checkpointer_fix.py) |
+| Quiz 1 | [Week 4 recap quiz](axiomcart_lessons/week4_recap/quiz_1_week4_recap.md) |
 | AxiomCart patterns | [L20](axiomcart_lessons/axiomcart_20.py) · [L21](axiomcart_lessons/axiomcart_21.py) · [L22](axiomcart_lessons/axiomcart_22.py) · [L23](axiomcart_lessons/axiomcart_23.py) · [L26](axiomcart_lessons/axiomcart_26.py) · [L27](axiomcart_lessons/axiomcart_27.py) · [L29](axiomcart_lessons/axiomcart_29.py) |
+| Quiz 2 | [AxiomCart patterns quiz](axiomcart_lessons/quiz_2_axiomcart_patterns.md) |
 | AxiomCart | [axiomcart-ai-assistant/](axiomcart-ai-assistant/) with the [sample questions](axiomcart_lessons/axiomcart_sample_questions.md) |
