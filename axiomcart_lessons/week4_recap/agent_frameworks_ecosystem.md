@@ -6,7 +6,7 @@ A short map of where the tools we use fit, and what the alternatives look like.
 
 | Piece | What it is | Where we used it |
 | --- | --- | --- |
-| **LangChain** | Building blocks for LLM apps: chat models, messages, prompts, tools (`@tool`), retrievers, structured output. Also a ready-made agent (`create_agent`). | `HumanMessage`, `AIMessage`, `@tool`, `bind_tools`, `with_structured_output` |
+| **LangChain** | Building blocks for LLM apps: chat models, messages, prompts, tools (`@tool`), retrievers, structured output.  | `HumanMessage`, `AIMessage`, `@tool`, `bind_tools`, `with_structured_output` |
 | **LangGraph** | Low-level orchestration: your app is a **graph** of nodes over a shared **state**. Adds the things production agents need: checkpoints, memory per `thread_id`, `interrupt()` / resume, parallel branches, streaming. | Every recap file and lessons 20–29 |
 | **Integration packages** | One package per provider: `langchain-openai`, `langchain-anthropic`, `langchain-chroma`, ... | `ChatOpenAI`, `OpenAIEmbeddings`, Chroma in AxiomCart |
 | **LangSmith** | Tracing, debugging and evaluation: see every LLM call, tool call and node, with inputs, outputs, latency and cost. Also hosts and deploys LangGraph apps. | Not used here, but the first thing to add in a real project |
