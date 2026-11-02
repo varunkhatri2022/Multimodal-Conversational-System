@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AxiomCart Request Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: graph on the left, the step story + state on the right, controls underneath. */
+:root {
+  --bg: #f4f6f9;
+  --panel: #ffffff;
+  --ink: #172033;
+  --muted: #5d677a;
+  --line: #c3cad6;
+  --accent: #2563d6;
+  --wait: #c46a12;
+  --ok: #23845a;
+  --accent-soft: #dfe9fb;
+  --wait-soft: #fbeedd;
+  --bad: #c2362f;
+  --bad-soft: #fbe3e1;
+  --ok-soft: #dcf1e6;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141c; --panel: #161d28; --ink: #e5eaf2; --muted: #9aa6b8; --line: #364357;
+    --accent: #6ea2ff; --wait: #f0a35a; --ok: #4fbf85; --accent-soft: #1d2d4a; --wait-soft: #3a2a18;
+    --bad: #ff7b72; --bad-soft: #3d1f1f; --ok-soft: #173426;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141c; --panel: #161d28; --ink: #e5eaf2; --muted: #9aa6b8; --line: #364357;
+  --accent: #6ea2ff; --wait: #f0a35a; --ok: #4fbf85; --accent-soft: #1d2d4a; --wait-soft: #3a2a18;
+    --bad: #ff7b72; --bad-soft: #3d1f1f; --ok-soft: #173426;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1440px; margin: 0 auto; padding: 18px 20px 28px; display: grid; gap: 14px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; margin: 0; letter-spacing: 0.2px; text-wrap: balance; }
+.sub { color: var(--muted); margin: 2px 0 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab { font: 500 14px var(--font-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tab:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.stage { display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(300px, 1fr); gap: 14px; align-items: start; }
+.graph { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; overflow-x: auto; }
+.graph svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.story { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 12px; align-content: start; }
+.stepno { font: 500 13px var(--font-mono); color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.lesson { color: var(--accent); }
+.story h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+.story p { margin: 0; }
+.code { font: 13px/1.5 var(--font-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; }
+.log { font: 13px/1.5 var(--font-mono); color: var(--muted); }
+.log b { color: var(--ink); font-weight: 500; }
+.state h3 { font: 600 13px var(--font-body); text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 0 0 6px; }
+.state ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.state li { font: 13px/1.45 var(--font-mono); display: grid; grid-template-columns: 118px 1fr; gap: 8px; padding: 4px 6px; border-radius: 5px; }
+.state li .k { color: var(--muted); }
+.state li .v { word-break: break-word; }
+.state li.new { background: var(--accent-soft); }
+.state li.wait { background: var(--wait-soft); }
+.tag { font: 600 10px var(--font-body); letter-spacing: 0.5px; border-radius: 3px; padding: 1px 4px; margin-left: 6px; vertical-align: 1px; }
+li.new .tag { background: var(--accent); color: #fff; }
+li.wait .tag { background: var(--wait); color: #fff; }
+.state li.bad { background: var(--bad-soft); }
+.state li.ok { background: var(--ok-soft); }
+li.bad .tag { background: var(--bad); color: #fff; }
+li.ok .tag { background: var(--ok); color: #fff; }
+.tab-sep { width: 1px; background: var(--line); margin: 2px 4px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.btn { font: 600 14px var(--font-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 16px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dot { width: 22px; height: 6px; border-radius: 3px; background: var(--line); border: 0; padding: 0; cursor: pointer; }
+.dot.on { background: var(--accent); }
+.hint { color: var(--muted); font-size: 13px; margin-left: auto; }
+
+/* SVG graph */
+.g-node rect, .g-node circle { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; transition: stroke 0.25s, fill 0.25s; }
+.g-node text { fill: var(--ink); font-family: var(--font-body); font-size: 14px; font-weight: 600; text-anchor: middle; }
+.g-node text.s { fill: var(--muted); font-size: 11.5px; font-weight: 400; }
+.g-node text.m { font-family: var(--font-mono); font-weight: 400; font-size: 11px; fill: var(--muted); }
+.g-node.box > rect { stroke-dasharray: 0; }
+.g-node.sub > rect { fill: var(--bg); }
+.g-node.active > rect, .g-node.active > circle { stroke: var(--accent); stroke-width: 3; }
+.g-node.active > rect.inner { stroke-width: 2.5; }
+.g-node.waiting > rect { stroke: var(--wait); stroke-width: 3; }
+.g-node.dashed > rect { stroke-dasharray: 5 4; }
+.g-node.dim { opacity: 0.35; }
+.g-node.bad > rect { stroke: var(--bad); stroke-width: 3; fill: var(--bad-soft); }
+.g-node.ok > rect { stroke: var(--ok); stroke-width: 3; fill: var(--ok-soft); }
+.frame { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.frame-label { fill: var(--muted); font: 600 12px var(--font-body); letter-spacing: 0.8px; }
+.note { fill: var(--muted); font: 12px var(--font-body); }
+.note.bad { fill: var(--bad); font-weight: 600; }
+.note.ok { fill: var(--ok); font-weight: 600; }
+.run rect { fill: var(--bg); stroke: var(--line); }
+.run text { fill: var(--muted); font: 600 12px var(--font-mono); text-anchor: middle; }
+.run.done rect { fill: var(--accent-soft); stroke: var(--accent); }
+.run.on rect { fill: var(--accent); stroke: var(--accent); }
+.run.on text { fill: #fff; }
+/* the lesson 20/21 graphs have fewer nodes, so their text can be larger */
+#svg-l20 .g-node text, #svg-l21 .g-node text { font-size: 17px; }
+#svg-l20 .g-node text.s, #svg-l21 .g-node text.s { font-size: 13px; }
+#svg-l21 .g-node text.m { font-size: 12.5px; }
+#svg-l20 #n-start20 text, #svg-l20 #n-end20 text, #svg-l21 #n-start21 text, #svg-l21 #n-end21 text { font-size: 9.5px; }
+#svg-l20 .note, #svg-l21 .note { font-size: 14px; }
+#svg-l20 .elabel, #svg-l21 .elabel { font-size: 12.5px; }
+.edge { fill: none; stroke: var(--line); stroke-width: 2; marker-end: url(#arrow); transition: stroke 0.25s; }
+.edge.lit { stroke: var(--accent); stroke-width: 2.6; marker-end: url(#arrow-lit); }
+.edge.int { stroke-dasharray: 6 5; }
+.edge.int.lit { stroke: var(--wait); marker-end: url(#arrow-wait); }
+.edge.dim { opacity: 0.3; }
+.elabel { fill: var(--muted); font: 11px var(--font-mono); text-anchor: middle; }
+.pill rect { fill: var(--bg); stroke: var(--line); }
+.pill text { fill: var(--muted); font: 600 10.5px var(--font-body); text-anchor: middle; }
+.pill.active rect { fill: var(--accent); stroke: var(--accent); }
+.pill.active text { fill: #fff; }
+.pill.dim { opacity: 0.35; }
+.decision rect { fill: var(--accent-soft); stroke: var(--accent); }
+.decision text { fill: var(--ink); font: 500 12px var(--font-body); text-anchor: middle; }
+.paused text { fill: var(--wait); font: 700 11px var(--font-body); letter-spacing: 0.8px; text-anchor: middle; }
+.packet circle { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.packet.wait circle { fill: var(--wait); }
+.packet rect { fill: var(--ink); }
+.packet text { fill: var(--panel); font: 500 11px var(--font-mono); text-anchor: middle; }
+@media (max-width: 1000px) { .stage { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>AxiomCart Request Flow</h1>
+      <p class="sub">Follow one customer question through the graph, one step at a time. Tabs 5 and 6: why each agent's loop runs as a subgraph (lessons 20, 21).</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Scenario" id="tabs"></div>
+  </header>
+
+  <div class="stage">
+    <figure class="graph" style="margin:0">
+      <svg id="svg-axiom" class="gsvg" viewBox="0 0 1100 600" role="img" aria-label="AxiomCart graph: the customer's question goes through main.py into the orchestrator, which sends tasks to the product and support agents; each agent runs a model and tools loop; the synthesizer merges the results and the answer goes back to the customer.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8f99aa"/></marker>
+          <marker id="arrow-lit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563d6"/></marker>
+          <marker id="arrow-wait" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c46a12"/></marker>
+        </defs>
+
+        <!-- edges -->
+        <path class="edge" id="e-q_in" d="M140,278 L250,278"/>
+        <path class="edge" id="e-a_out" d="M250,312 L140,312"/>
+        <path class="edge" id="e-invoke" d="M370,295 L412,295"/>
+        <path class="edge" id="e-start_orch" d="M448,295 L480,295"/>
+        <path class="edge" id="e-orch_prod" d="M620,280 C652,280 652,165 690,165 L700,165"/>
+        <path class="edge" id="e-orch_supp" d="M620,310 C652,310 652,425 690,425 L700,425"/>
+        <path class="edge" id="e-prod_m2t" d="M780,146 L830,146"/>
+        <path class="edge" id="e-prod_t2m" d="M830,166 L780,166"/>
+        <path class="edge" id="e-supp_m2t" d="M780,406 L830,406"/>
+        <path class="edge" id="e-supp_t2m" d="M830,426 L780,426"/>
+        <path class="edge" id="e-prod_out" d="M740,180 L740,222 L920,222 C946,222 940,280 960,280"/>
+        <path class="edge" id="e-supp_out" d="M740,440 L740,482 L920,482 C946,482 940,310 960,310"/>
+        <path class="edge" id="e-synth_end" d="M1020,335 L1020,412"/>
+        <path class="edge" id="e-end_main" d="M1020,448 L1020,568 L310,568 L310,335"/>
+        <path class="edge int" id="e-interrupt" d="M712,440 L712,535 L340,535 L340,335"/>
+        <text class="elabel" x="665" y="583">final_answer goes back to main.py</text>
+        <text class="elabel" x="526" y="527">interrupt() / Command(resume=...)</text>
+        <text class="elabel" x="652" y="232">Send</text>
+        <text class="elabel" x="652" y="372">Send</text>
+
+        <!-- customer -->
+        <g class="g-node box" id="n-customer"><rect x="20" y="255" width="120" height="80" rx="8"/><text x="80" y="290">Customer</text><text class="s" x="80" y="308">text or voice</text></g>
+        <g class="pill" id="n-stt"><rect x="168" y="268" width="54" height="20" rx="10"/><text x="195" y="282">STT</text></g>
+        <g class="pill" id="n-tts"><rect x="168" y="302" width="54" height="20" rx="10"/><text x="195" y="316">TTS</text></g>
+
+        <!-- main.py -->
+        <g class="g-node box" id="n-main"><rect x="250" y="255" width="120" height="80" rx="8"/><text x="310" y="290">main.py</text><text class="m" x="310" y="308">query()</text></g>
+
+        <!-- START -->
+        <g class="g-node" id="n-start"><circle cx="430" cy="295" r="18"/><text x="430" y="299" style="font-size:9.5px">START</text></g>
+
+        <!-- orchestrator -->
+        <g class="g-node box" id="n-orch"><rect x="480" y="255" width="140" height="80" rx="8"/><text x="550" y="290">orchestrator</text><text class="s" x="550" y="308">LLM picks agents</text></g>
+        <g class="decision" id="decision" visibility="hidden"><rect id="decision-bg" x="430" y="212" width="240" height="26" rx="13"/><text id="decision-text" x="550" y="229"></text></g>
+
+        <!-- memory -->
+        <g class="g-node box dashed" id="n-mem"><rect x="470" y="410" width="160" height="52" rx="8"/><text x="550" y="432" style="font-size:13px">MemorySaver</text><text class="m" x="550" y="449">thread_id: user-1</text></g>
+
+        <!-- product agent (subgraph) -->
+        <g class="g-node box" id="n-prod"><rect x="690" y="80" width="230" height="168" rx="10"/><text x="805" y="103">product_agent</text><text class="s" x="805" y="119">subgraph: model and tools loop</text></g>
+        <g class="g-node sub" id="n-prod_model"><rect class="inner" x="700" y="130" width="80" height="50" rx="6"/><text x="740" y="160" style="font-size:13px">model</text></g>
+        <g class="g-node sub" id="n-prod_tools"><rect class="inner" x="830" y="130" width="80" height="50" rx="6"/><text x="870" y="160" style="font-size:13px">tools</text></g>
+        <g class="g-node" id="lbl-prod"><text class="m" x="870" y="200">search_product_catalog</text></g>
+
+        <!-- support agent (subgraph) -->
+        <g class="g-node box" id="n-supp"><rect x="690" y="340" width="230" height="168" rx="10"/><text x="805" y="363">support_agent</text><text class="s" x="805" y="379">subgraph: model and tools loop</text></g>
+        <g class="g-node sub" id="n-supp_model"><rect class="inner" x="700" y="390" width="80" height="50" rx="6"/><text x="740" y="420" style="font-size:13px">model</text></g>
+        <g class="g-node sub" id="n-supp_tools"><rect class="inner" x="830" y="390" width="80" height="50" rx="6"/><text x="870" y="420" style="font-size:13px">tools</text></g>
+        <g class="g-node" id="lbl-supp"><text class="m" x="870" y="460">get_order_status</text></g>
+        <g class="paused" id="paused" visibility="hidden"><text x="805" y="500">PAUSED: waiting for the customer</text></g>
+
+        <!-- synthesizer + END -->
+        <g class="g-node box" id="n-synth"><rect x="960" y="255" width="120" height="80" rx="8"/><text x="1020" y="290">synthesizer</text><text class="s" x="1020" y="308">merges answers</text></g>
+        <g class="g-node" id="n-end"><circle cx="1020" cy="430" r="18"/><text x="1020" y="434" style="font-size:9.5px">END</text></g>
+
+        <g class="packets"></g>
+      </svg>
+
+      <svg id="svg-l20" class="gsvg" viewBox="0 0 1100 600" role="img" aria-label="Lesson 20 graph: START sends to hotel_agent and trip_agent; trip_agent loops through tool in the main graph; both lead to the synthesizer, then END." style="display:none">
+        <g class="run" data-run="1"><rect x="330" y="18" width="110" height="30" rx="15"/><text x="385" y="38">STEP 1</text></g>
+        <g class="run" data-run="2"><rect x="460" y="18" width="110" height="30" rx="15"/><text x="515" y="38">STEP 2</text></g>
+        <g class="run" data-run="3"><rect x="590" y="18" width="110" height="30" rx="15"/><text x="645" y="38">STEP 3</text></g>
+        <g class="run" data-run="4"><rect x="720" y="18" width="110" height="30" rx="15"/><text x="775" y="38">STEP 4</text></g>
+        <text class="note" x="316" y="38" text-anchor="end">steps of the main graph:</text>
+        <rect class="frame" x="20" y="70" width="1060" height="510" rx="10"/>
+        <text class="frame-label" x="40" y="96">MAIN GRAPH: one shared state</text>
+
+        <path class="edge" id="e-a20_start_hotel" d="M110,310 C190,310 190,175 270,175"/>
+        <path class="edge" id="e-a20_start_trip" d="M110,310 C190,310 190,415 270,415"/>
+        <path class="edge" id="e-a20_hotel_synth" d="M440,175 C620,175 620,295 760,295"/>
+        <path class="edge" id="e-a20_trip_synth" d="M440,405 C620,405 620,325 760,325"/>
+        <path class="edge" id="e-a20_trip_tool" d="M330,450 L330,500"/>
+        <path class="edge" id="e-a20_tool_trip" d="M380,500 L380,450"/>
+        <path class="edge" id="e-a20_synth_end" d="M930,310 L988,310"/>
+        <text class="elabel" x="214" y="232">Send</text>
+        <text class="elabel" x="214" y="398">Send</text>
+        <text class="elabel" x="610" y="395">route_trip</text>
+        <text class="note bad" x="460" y="532">the tool loop is wired into the MAIN graph</text>
+
+        <g class="g-node" id="n-start20"><circle cx="90" cy="310" r="20"/><text x="90" y="314" style="font-size:9.5px">START</text></g>
+        <g class="g-node box" id="n-hotel20"><rect x="270" y="140" width="170" height="70" rx="8"/><text x="355" y="171">hotel_agent</text><text class="s" x="355" y="190">answers right away</text></g>
+        <g class="g-node box" id="n-trip20"><rect x="270" y="380" width="170" height="70" rx="8"/><text x="355" y="411">trip_agent</text><text class="s" x="355" y="430">needs a tool first</text></g>
+        <g class="g-node box" id="n-tool20"><rect x="270" y="500" width="170" height="56" rx="8"/><text x="355" y="533">tool</text></g>
+        <g class="g-node box" id="n-synth20"><rect x="760" y="275" width="170" height="70" rx="8"/><text x="845" y="306">synthesizer</text><text class="s" x="845" y="325">merges results</text></g>
+        <g class="g-node" id="n-end20"><circle cx="1010" cy="310" r="20"/><text x="1010" y="314" style="font-size:9.5px">END</text></g>
+        <g class="packets"></g>
+      </svg>
+
+      <svg id="svg-l21" class="gsvg" viewBox="0 0 1100 600" role="img" aria-label="Lesson 21 graph: START sends to hotel_agent and trip_agent; trip_agent runs its think and tool loop inside a private subgraph; a join edge waits for both agents before the synthesizer, then END." style="display:none">
+        <g class="run" data-run="1"><rect x="330" y="18" width="110" height="30" rx="15"/><text x="385" y="38">STEP 1</text></g>
+        <g class="run" data-run="2"><rect x="460" y="18" width="110" height="30" rx="15"/><text x="515" y="38">STEP 2</text></g>
+        <text class="note" x="316" y="38" text-anchor="end">steps of the main graph:</text>
+        <text class="note" x="590" y="38">(lesson 20 needed 4)</text>
+        <rect class="frame" x="20" y="70" width="1060" height="510" rx="10"/>
+        <text class="frame-label" x="40" y="96">MAIN GRAPH: one shared state</text>
+
+        <path class="edge" id="e-a21_start_hotel" d="M110,310 C190,310 190,175 270,175"/>
+        <path class="edge" id="e-a21_start_trip" d="M110,310 C190,310 190,440 270,440"/>
+        <path class="edge" id="e-a21_hotel_synth" d="M440,175 C620,175 640,295 760,295"/>
+        <path class="edge" id="e-a21_trip_synth" d="M600,440 C690,440 690,325 760,325"/>
+        <path class="edge" id="e-a21_think_tool" d="M400,420 L470,420"/>
+        <path class="edge" id="e-a21_tool_think" d="M470,440 L400,440"/>
+        <path class="edge" id="e-a21_synth_end" d="M930,310 L988,310"/>
+        <text class="elabel" x="214" y="232">Send</text>
+        <text class="elabel" x="214" y="410">Send</text>
+        <text class="note" x="845" y="262" text-anchor="middle">join: waits for both agents</text>
+
+        <g class="g-node" id="n-start21"><circle cx="90" cy="310" r="20"/><text x="90" y="314" style="font-size:9.5px">START</text></g>
+        <g class="g-node box" id="n-hotel21"><rect x="270" y="140" width="170" height="70" rx="8"/><text x="355" y="171">hotel_agent</text><text class="s" x="355" y="190">answers right away</text></g>
+        <g class="g-node box" id="n-trip21"><rect x="270" y="340" width="330" height="200" rx="10"/><text x="435" y="364">trip_agent</text><text class="s" x="435" y="381">calls trip_subgraph.invoke(...)</text></g>
+        <g class="g-node sub" id="n-think21"><rect class="inner" x="290" y="402" width="110" height="56" rx="6"/><text x="345" y="436">think</text></g>
+        <g class="g-node sub" id="n-tool21"><rect class="inner" x="470" y="402" width="110" height="56" rx="6"/><text x="525" y="436">tool</text></g>
+        <g class="g-node"><text class="m" x="435" y="490">private state: task, messages</text><text class="note ok" x="435" y="515" text-anchor="middle">the loop lives in the SUBGRAPH</text></g>
+        <g class="g-node box" id="n-synth21"><rect x="760" y="275" width="170" height="70" rx="8"/><text x="845" y="306">synthesizer</text><text class="s" x="845" y="325">merges results</text></g>
+        <g class="g-node" id="n-end21"><circle cx="1010" cy="310" r="20"/><text x="1010" y="314" style="font-size:9.5px">END</text></g>
+        <g class="packets"></g>
+      </svg>
+    </figure>
+
+    <section class="story" aria-live="polite">
+      <div class="stepno"><span id="stepno"></span><span class="lesson" id="lesson"></span></div>
+      <h2 id="title"></h2>
+      <p id="text"></p>
+      <div class="code" id="code"></div>
+      <div class="log" id="log"></div>
+      <div class="state"><h3>Main graph state after this step</h3><ul id="state"></ul></div>
+      <div class="state" id="extra-wrap"><h3 id="extra-title"></h3><ul id="extra"></ul></div>
+    </section>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="prev" type="button">Previous</button>
+    <button class="btn primary" id="next" type="button">Next</button>
+    <button class="btn" id="play" type="button">Play</button>
+    <button class="btn" id="restart" type="button">Restart</button>
+    <div class="dots" id="dots" aria-label="Steps"></div>
+    <span class="hint">Keys: right arrow or space = next, left arrow = back, 1 to 6 = scenario</span>
+  </div>
+</div>
+
+<script>
+// ---- Scenario data ---------------------------------------------------------
+// Each step: what moves (anims), which nodes light up, the story text, and the main state after it.
+const EMPTY = { messages: "[]", user_query: '""', tasks: "[]", agent_results: "[]", final_answer: '""' };
+
+const S20 = { results: "[]", trip_messages: "[]" };   // lesson 20's main state
+const S21 = { results: "[]" };                          // lesson 21: no trip_messages
+
+function st(over, marks, base) {     // build a state list; marks = {key: "new" | "wait" | "bad" | "ok"}
+  const s = Object.assign({}, base || EMPTY, over);
+  return Object.keys(s).map(k => ({ k, v: s[k], tag: (marks || {})[k] || "" }));
+}
+
+const SCENARIOS = [
+  {
+    id: "greeting", name: "1. Greeting", query: "Hi there!",
+    steps: [
+      { title: "The customer asks", lesson: "Recap 4: thread_id",
+        text: "main.py sends the question into the graph. The thread_id ties every turn of this conversation together.",
+        code: 'graph.invoke({"messages": [HumanMessage("Hi there!")],\n              "user_query": "Hi there!"}, config)',
+        log: 'Orchestrator  query=<b>\'Hi there!\'</b>',
+        anims: [{ e: "q_in", label: "Hi there!" }, { e: "invoke", d: 900 }, { e: "start_orch", d: 1500 }],
+        on: ["customer", "main", "start", "orch"],
+        state: st({ messages: '["Customer: Hi there!"]', user_query: '"Hi there!"' }, { messages: "new", user_query: "new" }) },
+      { title: "The orchestrator reads the intent", lesson: "L22, L23",
+        text: "An LLM classifies the question and returns which agents are needed. Greetings and small talk go to the product agent. It also resets agent_results for this turn.",
+        code: 'classifier = llm.with_structured_output(ClassificationResult)\n# tasks = [product_agent: "greet the customer"]',
+        log: "routing=<b>['product_agent']</b>  synthesis=False",
+        decision: "intent: greeting -> product_agent",
+        anims: [], on: ["orch"],
+        state: st({ messages: '["Customer: Hi there!"]', user_query: '"Hi there!"', tasks: '[product_agent: "greet the customer"]', agent_results: "[]  (reset)" }, { tasks: "new", agent_results: "new" }) },
+      { title: "Send hands the task to one agent", lesson: "R3, L22",
+        text: "The orchestrator returns Command(goto=[Send(...)]). The agent receives only its payload: the task, the question and the conversation so far.",
+        code: 'Command(goto=[Send("product_agent", {"task_description": ...,\n                                    "user_query": "Hi there!",\n                                    "messages": [...]})])',
+        decision: "intent: greeting -> product_agent",
+        anims: [{ e: "orch_prod", label: "task" }], on: ["prod", "prod_model"],
+        state: st({ messages: '["Customer: Hi there!"]', user_query: '"Hi there!"', tasks: '[product_agent: "greet the customer"]' }) },
+      { title: "The agent answers without a tool", lesson: "L21",
+        text: "Inside its own subgraph, the model sees no need to search the catalog and replies directly. The answer goes into agent_results.",
+        code: 'return Command(update={"agent_results": [{"source": "product_discovery",\n                                          "response": answer}]},\n               goto="synthesizer")',
+        anims: [{ e: "prod_out", label: "answer" }], on: ["prod", "prod_model", "synth"],
+        state: st({ messages: '["Customer: Hi there!"]', user_query: '"Hi there!"', tasks: '[product_agent: "greet the customer"]', agent_results: '[product_discovery: "Hello! What are you shopping for?"]' }, { agent_results: "new" }) },
+      { title: "One result: pass it through", lesson: "R3",
+        text: "With a single result, the synthesizer copies it into final_answer. No extra LLM call is needed.",
+        code: 'if len(results) == 1:\n    return {"final_answer": results[0]["response"]}',
+        log: "Synthesizer  <b>single-agent pass-through</b>",
+        anims: [{ e: "synth_end", label: "final_answer" }], on: ["synth", "end"],
+        state: st({ messages: '["Customer: Hi there!"]', user_query: '"Hi there!"', tasks: '[product_agent: "greet the customer"]', agent_results: '[product_discovery: "Hello! ..."]', final_answer: '"Hello! What are you shopping for?"' }, { final_answer: "new" }) },
+      { title: "The answer reaches the customer", lesson: "Recap 4",
+        text: "The graph ends. main.py prints final_answer, and the checkpointer has saved this turn under the same thread_id.",
+        code: 'print(f"Assistant: {answer}")',
+        anims: [{ e: "end_main", label: "Hello!" }, { e: "a_out", d: 1300, label: "Hello!" }], on: ["main", "customer", "mem"],
+        state: st({ messages: '["Customer: Hi there!"]', user_query: '"Hi there!"', tasks: '[product_agent: "greet the customer"]', agent_results: '[product_discovery: "Hello! ..."]', final_answer: '"Hello! What are you shopping for?"' }) },
+    ]
+  },
+  {
+    id: "product", name: "2. One agent + tool", query: "Do you have noise-cancelling headphones?",
+    steps: [
+      { title: "The customer asks", lesson: "Recap 4: thread_id",
+        text: "main.py sends the question into the graph with the conversation's thread_id.",
+        code: 'graph.invoke({"messages": [HumanMessage(q)], "user_query": q}, config)',
+        log: "Orchestrator  query=<b>'Do you have noise-cancelling headphones?'</b>",
+        anims: [{ e: "q_in", label: "headphones?" }, { e: "invoke", d: 900 }, { e: "start_orch", d: 1500 }],
+        on: ["customer", "main", "start", "orch"],
+        state: st({ messages: '["Customer: Do you have noise-cancelling headphones?"]', user_query: '"Do you have noise-cancelling headphones?"' }, { messages: "new", user_query: "new" }) },
+      { title: "The orchestrator reads the intent", lesson: "L22, L23",
+        text: "The LLM sees a product search. Only the product agent is needed.",
+        code: '# tasks = [product_agent: "find noise-cancelling headphones"]',
+        log: "routing=<b>['product_agent']</b>  synthesis=False",
+        decision: "intent: product search -> product_agent",
+        anims: [], on: ["orch"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: "find noise-cancelling headphones"]', agent_results: "[]  (reset)" }, { tasks: "new", agent_results: "new" }) },
+      { title: "Send hands the task to the agent", lesson: "R3, L22",
+        text: "One Send, one agent. The agent receives only its task and the question.",
+        code: 'Command(goto=[Send("product_agent", {...task...})])',
+        decision: "intent: product search -> product_agent",
+        anims: [{ e: "orch_prod", label: "task" }], on: ["prod", "prod_model"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: "find noise-cancelling headphones"]' }) },
+      { title: "The model asks for a tool", lesson: "R2, L21",
+        text: "The model needs real catalog data, so it replies with a tool call instead of an answer.",
+        code: 'AIMessage(content="", tool_calls=[{"name": "search_product_catalog",\n    "args": {"query": "noise-cancelling headphones"}}])',
+        anims: [{ e: "prod_m2t", label: "search(...)" }], on: ["prod", "prod_model", "prod_tools"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: "find noise-cancelling headphones"]' }) },
+      { title: "The tool searches the catalog", lesson: "RAG (project walkthrough)",
+        text: "The tool turns the query into a vector, finds the 3 closest products in the vector store, and returns them to the model as a ToolMessage.",
+        code: 'product_vectorstore.similarity_search(query, k=3)\n# -> Bose QC45, Sony WH-1000XM5, boAt Airdopes 141',
+        anims: [{ e: "prod_t2m", label: "3 products" }], on: ["prod", "prod_tools", "prod_model"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: "find noise-cancelling headphones"]' }) },
+      { title: "The model writes the answer", lesson: "R2, L21",
+        text: "With the search results in front of it, the model answers. The whole loop happened inside the subgraph, in one step of the main graph.",
+        code: 'return Command(update={"agent_results": [...]}, goto="synthesizer")',
+        anims: [{ e: "prod_out", label: "answer" }], on: ["prod", "prod_model", "synth"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: "find noise-cancelling headphones"]', agent_results: '[product_discovery: "Sony WH-1000XM5 (Rs 12,999), Bose QC45 ..."]' }, { agent_results: "new" }) },
+      { title: "One result: pass it through", lesson: "R3",
+        text: "A single result is copied into final_answer.",
+        code: 'return {"final_answer": results[0]["response"]}',
+        log: "Synthesizer  <b>single-agent pass-through</b>",
+        anims: [{ e: "synth_end", label: "final_answer" }], on: ["synth", "end"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: ...]', agent_results: '[product_discovery: "Sony ..., Bose ..."]', final_answer: '"We have Sony WH-1000XM5 and Bose QC45 ..."' }, { final_answer: "new" }) },
+      { title: "The answer reaches the customer", lesson: "Recap 4",
+        text: "main.py prints final_answer. The turn is saved under the thread_id.",
+        code: 'print(f"Assistant: {answer}")',
+        anims: [{ e: "end_main", label: "answer" }, { e: "a_out", d: 1300, label: "answer" }], on: ["main", "customer", "mem"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: ...]', agent_results: '[product_discovery: "Sony ..., Bose ..."]', final_answer: '"We have Sony WH-1000XM5 and Bose QC45 ..."' }) },
+    ]
+  },
+  {
+    id: "mixed", name: "3. Two agents + interrupt", query: "My order is late, also show me some earbuds",
+    steps: [
+      { title: "The customer asks a two-part question", lesson: "Recap 4: thread_id",
+        text: "One question, two needs: an order problem and a product search.",
+        code: 'graph.invoke({"messages": [HumanMessage(q)], "user_query": q}, config)',
+        log: "Orchestrator  query=<b>'My order is late, also show me some earbuds'</b>",
+        anims: [{ e: "q_in", label: "order + earbuds" }, { e: "invoke", d: 900 }, { e: "start_orch", d: 1500 }],
+        on: ["customer", "main", "start", "orch"],
+        state: st({ messages: '["Customer: My order is late, also show me some earbuds"]', user_query: '"My order is late, also show me some earbuds"' }, { messages: "new", user_query: "new" }) },
+      { title: "The orchestrator finds two intents", lesson: "L22, L23",
+        text: "The LLM returns two tasks, one per agent, and marks that the answers must be merged.",
+        code: '# tasks = [support_agent: "check the late order",\n#          product_agent: "recommend earbuds"]\n# requires_synthesis = True',
+        log: "routing=<b>['support_agent', 'product_agent']</b>  synthesis=True",
+        decision: "intent: order issue + product -> BOTH",
+        anims: [], on: ["orch"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: "check the late order",\n product_agent: "recommend earbuds"]', agent_results: "[]  (reset)" }, { tasks: "new", agent_results: "new" }) },
+      { title: "Two Sends: both agents start together", lesson: "R3, L22",
+        text: "Two Send objects start both agents in the same step. Each one receives only its own task.",
+        code: 'Command(goto=[Send("support_agent", {...order task...}),\n              Send("product_agent", {...earbuds task...})])',
+        decision: "intent: order issue + product -> BOTH",
+        anims: [{ e: "orch_prod", label: "earbuds task" }, { e: "orch_supp", label: "order task" }], on: ["prod", "prod_model", "supp", "supp_model"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]' }) },
+      { title: "Product agent searches; support agent has no order ID", lesson: "R2, L21",
+        text: "The product agent runs its tool loop and finishes. The support agent's model realises it cannot check an order without the order ID.",
+        code: '# product: model -> search_product_catalog("earbuds") -> model -> answer\n# support: model -> "Could you provide your order ID?"',
+        anims: [{ e: "prod_m2t", label: "search(...)" }, { e: "prod_t2m", d: 1200, label: "results" }],
+        on: ["prod", "prod_model", "prod_tools", "supp", "supp_model"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: "boAt Airdopes 141 (Rs 1,299) ..."]' }, { agent_results: "new" }) },
+      { title: "interrupt(): the graph pauses and asks", lesson: "L26, L27",
+        text: "support_model calls interrupt(question). The graph saves its state and stops; invoke() returns __interrupt__, and main.py shows the question. The product result is already saved. The synthesizer waits, because this step is not finished.",
+        code: 'user_reply = interrupt("Could you provide your order ID?")',
+        log: "HITL interrupt: <b>'Could you provide your order ID?'</b>",
+        anims: [{ e: "interrupt", label: "order ID?", wait: true }, { e: "a_out", d: 1500, label: "order ID?", wait: true }],
+        on: ["mem", "main", "customer"], waiting: ["supp", "supp_model"], paused: true,
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: "boAt Airdopes 141 ..."]', __interrupt__: '"Could you provide your order ID?"' }, { __interrupt__: "wait" }) },
+      { title: "The customer replies; main.py resumes", lesson: "L26",
+        text: "The reply goes back into the same thread with Command(resume=...). Nothing ran while the graph was waiting.",
+        code: 'graph.invoke(Command(resume="ORD102"), config)',
+        log: "HITL resume: user_answer=<b>'ORD102'</b>",
+        anims: [{ e: "q_in", label: "ORD102" }, { e: "interrupt", d: 1000, rev: true, label: "resume(ORD102)" }],
+        on: ["customer", "main", "mem", "supp", "supp_model"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: "boAt Airdopes 141 ..."]' }) },
+      { title: "Support agent reruns and calls its tool", lesson: "L27",
+        text: "support_agent reruns from its first line, and the subgraph resumes at the model. This time interrupt() returns \"ORD102\", so the model calls the order tool. The product agent does not run again.",
+        code: 'get_order_status(identifier="ORD102")',
+        anims: [{ e: "supp_m2t", label: "get_order_status" }], on: ["supp", "supp_model", "supp_tools"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: "boAt Airdopes 141 ..."]' }) },
+      { title: "The order status comes back", lesson: "R2, L21",
+        text: "The tool returns the status and the support model writes its answer. Now both agents have finished, so the step is complete.",
+        code: '# "Order ORD102: Bose QC45 is Delayed (bad weather), new ETA Feb 15"',
+        anims: [{ e: "supp_t2m", label: "Delayed" }], on: ["supp", "supp_tools", "supp_model"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: "boAt Airdopes 141 ...",\n sales_support: "ORD102 is delayed by bad weather ..."]' }, { agent_results: "new" }) },
+      { title: "Two results: the synthesizer merges them", lesson: "R3",
+        text: "Both answers arrive together. With two results, the synthesizer makes one more LLM call to write a single reply.",
+        code: 'merged = llm.invoke("Combine these agent responses into one reply ...")',
+        log: "Synthesizer  <b>merging 2 agent responses</b>",
+        anims: [{ e: "prod_out", label: "earbuds" }, { e: "supp_out", label: "order status" }, { e: "synth_end", d: 1300, label: "final_answer" }],
+        on: ["prod", "supp", "synth", "end"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: ..., sales_support: ...]', final_answer: '"Your order ORD102 is delayed by bad weather ... For earbuds, try boAt Airdopes 141 ..."' }, { final_answer: "new" }) },
+      { title: "One reply reaches the customer", lesson: "Recap 4",
+        text: "The customer gets one answer that covers both questions.",
+        code: 'print(f"Assistant: {answer}")',
+        anims: [{ e: "end_main", label: "reply" }, { e: "a_out", d: 1300, label: "reply" }], on: ["main", "customer", "mem"],
+        state: st({ messages: '["Customer: My order is late, ..."]', user_query: '"My order is late, also show me some earbuds"', tasks: '[support_agent: ..., product_agent: ...]', agent_results: '[product_discovery: ..., sales_support: ...]', final_answer: '"Your order ORD102 is delayed ... try boAt Airdopes 141 ..."' }) },
+    ]
+  },
+  {
+    id: "voice", name: "4. Voice", query: "(spoken) Do you have noise-cancelling headphones?", voice: true,
+    steps: [
+      { title: "The customer speaks", lesson: "L29",
+        text: "voice.py records 5 seconds from the microphone. whisper-1 (speech-to-text) turns the audio into text.",
+        code: '_, transcript = recorder.record_and_transcribe(duration=5)\n# transcript = "Do you have noise-cancelling headphones?"',
+        anims: [{ e: "q_in", label: "audio" }], on: ["customer", "stt", "main"],
+        state: st({}) },
+      { title: "From here on, it is plain text", lesson: "L29",
+        text: "main.py calls the same query() as text mode. The graph never knows the question was spoken.",
+        code: 'answer = self.query(transcript)',
+        log: "Orchestrator  query=<b>'Do you have noise-cancelling headphones?'</b>",
+        anims: [{ e: "invoke", label: "text" }, { e: "start_orch", d: 700 }], on: ["main", "start", "orch"],
+        state: st({ messages: '["Customer: Do you have noise-cancelling headphones?"]', user_query: '"Do you have noise-cancelling headphones?"' }, { messages: "new", user_query: "new" }) },
+      { title: "Same routing as text mode", lesson: "L22",
+        text: "The orchestrator sends a product task to the product agent, exactly as in scenario 2.",
+        decision: "intent: product search -> product_agent",
+        code: 'Command(goto=[Send("product_agent", {...})])',
+        log: "routing=<b>['product_agent']</b>  synthesis=False",
+        anims: [{ e: "orch_prod", label: "task" }], on: ["orch", "prod", "prod_model"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: "find noise-cancelling headphones"]', agent_results: "[]  (reset)" }, { tasks: "new", agent_results: "new" }) },
+      { title: "Same tool loop", lesson: "R2, L21",
+        text: "The model calls the search tool, gets three products and writes its answer.",
+        code: 'search_product_catalog("noise-cancelling headphones")',
+        anims: [{ e: "prod_m2t", label: "search(...)" }, { e: "prod_t2m", d: 1200, label: "3 products" }],
+        on: ["prod", "prod_model", "prod_tools"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: ...]', agent_results: '[product_discovery: "Sony WH-1000XM5, Bose QC45 ..."]' }, { agent_results: "new" }) },
+      { title: "final_answer is ready", lesson: "R3",
+        text: "One result, so the synthesizer passes it through.",
+        code: 'return {"final_answer": results[0]["response"]}',
+        anims: [{ e: "prod_out", label: "answer" }, { e: "synth_end", d: 1300, label: "final_answer" }], on: ["prod", "synth", "end"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: ...]', agent_results: '[product_discovery: "Sony ..., Bose ..."]', final_answer: '"We have Sony WH-1000XM5 and Bose QC45 ..."' }, { final_answer: "new" }) },
+      { title: "The answer is spoken", lesson: "L29",
+        text: "tts-1 (text-to-speech, voice \"nova\") turns final_answer into audio and plays it. Voice is only a wrapper around the same graph.",
+        code: 'speaker.speak(answer)   # tts-1 -> MP3 -> speakers',
+        anims: [{ e: "end_main", label: "text" }, { e: "a_out", d: 1300, label: "audio" }], on: ["main", "tts", "customer", "mem"],
+        state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: ...]', agent_results: '[product_discovery: "Sony ..., Bose ..."]', final_answer: '"We have Sony WH-1000XM5 and Bose QC45 ..."' }) },
+    ]
+  },
+  {
+    id: "l20", name: "5. L20: loop in main graph", graph: "l20", query: "axiomcart_20.py: the tool loop is wired into the main graph",
+    steps: [
+      { run: 1, title: "STEP 1: dispatch sends two jobs", lesson: "L20 (uses R3)",
+        text: "dispatch returns two Send objects, so both agents start in STEP 1. Each one receives its own payload with its task.",
+        code: 'Send("hotel_agent", {"task": "hotels in Jaipur"})\nSend("trip_agent",  {"task": "3-day Jaipur plan"})',
+        anims: [{ e: "a20_start_hotel", label: "hotels in Jaipur" }, { e: "a20_start_trip", label: "3-day Jaipur plan" }],
+        on: ["start20", "hotel20", "trip20"],
+        state: st({}, {}, S20),
+        extra: { title: "What each agent receives (its Send payload)", rows: [
+          { k: "hotel_agent", v: '{"task": "hotels in Jaipur"}' },
+          { k: "trip_agent", v: '{"task": "3-day Jaipur plan"}' }] } },
+      { run: 1, title: "STEP 1 ends: hotel answers, trip asks for a tool", lesson: "L20",
+        text: "hotel_agent is done in one call. trip_agent needs a tool, so it writes \"need tool\" into trip_messages, which lives in the main state. Both updates are applied when STEP 1 ends.",
+        code: 'hotel_agent -> {"results": ["hotel_agent: hotels in Jaipur"]}\ntrip_agent  -> {"trip_messages": ["need tool"]}',
+        log: "trip_agent sees task = <b>'3-day Jaipur plan'</b>",
+        anims: [], on: ["hotel20", "trip20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool"]' }, { results: "new", trip_messages: "new" }, S20) },
+      { run: 2, title: "STEP 2: the edges pick the next nodes", lesson: "L20 (uses R1)",
+        text: "hotel_agent's edge points to synthesizer. route_trip sees \"need tool\" and points to tool. So synthesizer and tool both run in STEP 2, at the same time.",
+        code: 'builder.add_edge("hotel_agent", "synthesizer")\nroute_trip(state)  ->  "tool"',
+        anims: [{ e: "a20_hotel_synth", label: "hotel result" }, { e: "a20_trip_tool", label: "need tool" }],
+        on: ["synth20", "tool20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool"]' }, {}, S20) },
+      { run: 2, title: "✗ The synthesizer runs too early", lesson: "L20",
+        text: "The synthesizer does not know trip_agent is still in its loop. It runs with only the hotel result, so it produces half an answer.",
+        code: 'def synthesizer(state):\n    print(state["results"])   # only 1 of the 2 results',
+        log: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur']</b>",
+        anims: [], on: ["tool20"], bad: ["synth20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool", "tool result"]' }, { trip_messages: "new" }, S20),
+        extra: { title: "What the synthesizer sees", rows: [
+          { k: "results", v: '["hotel_agent: hotels in Jaipur"]', tag: "bad" },
+          { k: "missing", v: "trip_agent's answer: it is still in its loop", tag: "bad" }] } },
+      { run: 3, title: "✗ STEP 3: trip_agent runs again without its task", lesson: "L20",
+        text: "tool's edge goes back to trip_agent. This call does not come from a Send, so there is no payload. trip_agent receives the main state, and the main state has no \"task\" key.",
+        code: 'builder.add_edge("tool", "trip_agent")\ntask = state.get("task")   # None',
+        log: "trip_agent sees task = <b>None</b>",
+        anims: [{ e: "a20_tool_trip", label: "tool result" }], bad: ["trip20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool", "tool result"]' }, {}, S20),
+        extra: { title: "What trip_agent receives this time (the main state)", rows: [
+          { k: "results", v: '["hotel_agent: hotels in Jaipur"]' },
+          { k: "trip_messages", v: '["need tool", "tool result"]' },
+          { k: "task", v: "None: the Send payload was for the 1st call only", tag: "bad" }] } },
+      { run: 3, title: "trip_agent answers \"None\"", lesson: "L20",
+        text: "trip_agent finishes, but it no longer knows what it was asked, so its result says \"trip_agent: None\". Its loop history also sits in the main state, where every node can see it.",
+        code: 'return {"trip_messages": ["done"],\n        "results": ["trip_agent: " + str(task)]}',
+        anims: [], bad: ["trip20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: None"]', trip_messages: '["need tool", "tool result", "done"]' }, { results: "bad", trip_messages: "new" }, S20) },
+      { run: 4, title: "✗ STEP 4: the synthesizer runs a second time", lesson: "L20",
+        text: "route_trip now points to synthesizer, so it runs again, this time with both results. One question, two synthesizer runs. With a real LLM that is two calls, and the first one saw only half the answer.",
+        log: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: None']</b>",
+        code: 'route_trip(state)  ->  "synthesizer"',
+        anims: [{ e: "a20_trip_synth", label: "trip result" }, { e: "a20_synth_end", d: 1300 }],
+        on: ["end20"], bad: ["synth20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: None"]', trip_messages: '["need tool", "tool result", "done"]' }, {}, S20) },
+      { run: 4, title: "Summary: what went wrong", lesson: "L20 -> L21",
+        text: "The loop is wired into the main graph, so every pass through it is a separate main-graph step. Two problems: (1) trip_agent lost its task on its 2nd call, (2) the synthesizer ran twice, the first time with half the results. Tab 6 fixes both with a subgraph.",
+        code: "4 runs  |  synthesizer ran 2 times  |  trip_agent lost its task",
+        anims: [], bad: ["synth20", "trip20"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: None"]', trip_messages: '["need tool", "tool result", "done"]' }, { results: "bad", trip_messages: "bad" }, S20) },
+    ]
+  },
+  {
+    id: "l21", name: "6. L21: loop in subgraph", graph: "l21", query: "axiomcart_21.py: the same scenario, the loop moved into a subgraph",
+    steps: [
+      { run: 1, title: "STEP 1: the same two Sends", lesson: "L21",
+        text: "Same dispatch as lesson 20. The only change is inside trip_agent: its loop now runs as a subgraph.",
+        code: 'Send("hotel_agent", {"task": "hotels in Jaipur"})\nSend("trip_agent",  {"task": "3-day Jaipur plan"})',
+        anims: [{ e: "a21_start_hotel", label: "hotels in Jaipur" }, { e: "a21_start_trip", label: "3-day Jaipur plan" }],
+        on: ["start21", "hotel21", "trip21"],
+        state: st({}, {}, S21),
+        extra: { title: "What each agent receives (its Send payload)", rows: [
+          { k: "hotel_agent", v: '{"task": "hotels in Jaipur"}' },
+          { k: "trip_agent", v: '{"task": "3-day Jaipur plan"}' }] } },
+      { run: 1, title: "Inside trip_agent: the subgraph starts", lesson: "L21",
+        text: "trip_agent calls trip_subgraph.invoke(...) with its task. The subgraph has its own private state, and the task is stored there. think asks for the tool.",
+        code: 'trip_subgraph.invoke({"task": payload["task"], "messages": []})',
+        log: "think sees task = <b>'3-day Jaipur plan'</b>",
+        anims: [{ e: "a21_think_tool", label: "need tool" }], on: ["trip21", "think21", "tool21"],
+        state: st({ results: "[]  (updates are applied when STEP 1 ends)" }, {}, S21),
+        extra: { title: "trip_subgraph's private state", rows: [
+          { k: "task", v: '"3-day Jaipur plan"' },
+          { k: "messages", v: '["need tool"]', tag: "new" }] } },
+      { run: 1, title: "The loop runs inside the subgraph", lesson: "L21",
+        text: "tool goes back to think, and think still sees its task: the task is in the subgraph's state, not in a one-time payload. think answers and the subgraph ends. The main graph is still in STEP 1.",
+        code: 'def think(state: TripState):\n    state["task"]   # "3-day Jaipur plan" on every call',
+        log: "think sees task = <b>'3-day Jaipur plan'</b>",
+        anims: [{ e: "a21_tool_think", label: "tool result" }], on: ["trip21"], ok: ["think21"],
+        state: st({ results: "[]  (updates are applied when STEP 1 ends)" }, {}, S21),
+        extra: { title: "trip_subgraph's private state", rows: [
+          { k: "task", v: '"3-day Jaipur plan"', tag: "ok" },
+          { k: "messages", v: '["need tool", "tool result", "done"]', tag: "new" }] } },
+      { run: 1, title: "STEP 1 ends: both agents are done", lesson: "L21",
+        text: "The whole loop ran inside ONE main-graph step. Both results are applied together. The loop history (messages) stayed private and never reaches the main state.",
+        code: 'return {"results": ["trip_agent: " + payload["task"]]}',
+        anims: [], on: ["hotel21", "trip21"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: 3-day Jaipur plan"]' }, { results: "new" }, S21) },
+      { run: 2, title: "STEP 2: the synthesizer runs once, with both", lesson: "L21 (uses R1)",
+        text: "The join edge waits for both agents, so the synthesizer runs once and sees both answers.",
+        code: 'builder.add_edge(["hotel_agent", "trip_agent"], "synthesizer")',
+        log: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: 3-day Jaipur plan']</b>",
+        anims: [{ e: "a21_hotel_synth", label: "hotel result" }, { e: "a21_trip_synth", label: "trip result" }], ok: ["synth21"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: 3-day Jaipur plan"]' }, {}, S21),
+        extra: { title: "What the synthesizer sees", rows: [
+          { k: "results", v: "both answers, each with its real task", tag: "ok" }] } },
+      { run: 2, title: "Summary: lesson 20 vs lesson 21", lesson: "L21 -> AxiomCart",
+        text: "Moving the loop into a subgraph fixed both problems. AxiomCart does the same: product_agent and support_agent each run their model and tools loop as a subgraph (tab 3).",
+        code: "lesson 20:  4 runs  |  synthesizer 2 times  |  task lost\nlesson 21:  2 runs  |  synthesizer 1 time   |  task kept",
+        anims: [{ e: "a21_synth_end" }], on: ["end21"], ok: ["synth21", "trip21"],
+        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: 3-day Jaipur plan"]' }, { results: "ok" }, S21) },
+    ]
+  }
+];
+
+// ---- Rendering --------------------------------------------------------------
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const TAGS = { new: "CHANGED", wait: "WAITING", bad: "PROBLEM", ok: "FIXED" };
+let sc = 0, step = 0, runId = 0, playTimer = null;
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const a in attrs) n.setAttribute(a, attrs[a]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+
+function makePacket(parent, label, wait) {
+  const g = el("g", { class: "packet" + (wait ? " wait" : "") }, parent);
+  el("circle", { r: 8 }, g);
+  if (label) {
+    const w = label.length * 6.7 + 12;
+    el("rect", { x: -w / 2, y: -30, width: w, height: 18, rx: 4 }, g);
+    const t = el("text", { x: 0, y: -17 }, g);
+    t.textContent = label;
+  }
+  return g;
+}
+
+function place(g, path, frac) {
+  const len = path.getTotalLength();
+  const p = path.getPointAtLength(Math.max(0, Math.min(1, frac)) * len);
+  g.setAttribute("transform", `translate(${p.x},${p.y})`);
+}
+
+function animate(anim, parent, myRun, live) {
+  const path = document.getElementById("e-" + anim.e);
+  const g = makePacket(parent, anim.label, anim.wait);
+  const from = anim.rev ? 1 : 0, to = anim.rev ? 0 : 1;
+  if (!live) { place(g, path, to); return; }
+  place(g, path, from);
+  g.style.visibility = "hidden";
+  const dur = 1100;
+  setTimeout(() => {
+    if (myRun !== runId) return;
+    g.style.visibility = "visible";
+    const t0 = performance.now();
+    function tick(now) {
+      if (myRun !== runId) return;
+      let k = Math.min(1, (now - t0) / dur);
+      k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;   // ease in-out
+      place(g, path, from + (to - from) * k);
+      if (k < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, anim.d || 0);
+}
+
+function fillList(ul, rows) {
+  ul.replaceChildren();
+  for (const row of rows) {
+    const li = document.createElement("li");
+    if (row.tag) li.className = row.tag;
+    const k = document.createElement("span"); k.className = "k"; k.textContent = row.k;
+    const v = document.createElement("span"); v.className = "v"; v.textContent = row.v;
+    if (row.tag) { const t = document.createElement("span"); t.className = "tag"; t.textContent = TAGS[row.tag]; v.appendChild(t); }
+    li.append(k, v); ul.appendChild(li);
+  }
+}
+
+function render(live) {
+  runId++;
+  const S = SCENARIOS[sc], s = S.steps[step];
+  const graphId = S.graph || "axiom";
+  // show the graph this scenario uses
+  document.querySelectorAll(".gsvg").forEach(g => { g.style.display = g.id === "svg-" + graphId ? "" : "none"; });
+  const svg = document.getElementById("svg-" + graphId);
+  // nodes
+  svg.querySelectorAll('.g-node[id^="n-"]').forEach(n => {
+    const id = n.id.slice(2);
+    n.classList.toggle("active", (s.on || []).includes(id));
+    n.classList.toggle("waiting", (s.waiting || []).includes(id));
+    n.classList.toggle("bad", (s.bad || []).includes(id));
+    n.classList.toggle("ok", (s.ok || []).includes(id));
+  });
+  // edges
+  const used = new Set((s.anims || []).map(a => a.e));
+  svg.querySelectorAll(".edge").forEach(p => p.classList.toggle("lit", used.has(p.id.slice(2))));
+  // main-graph steps (STEP 1, STEP 2, ...) for the lesson graphs
+  svg.querySelectorAll(".run").forEach(r => {
+    const n = Number(r.dataset.run);
+    r.classList.toggle("on", n === s.run);
+    r.classList.toggle("done", n < s.run);
+  });
+  if (graphId === "axiom") {
+    for (const id of ["stt", "tts"]) {
+      const n = document.getElementById("n-" + id);
+      n.classList.toggle("dim", !S.voice);
+      n.classList.toggle("active", (s.on || []).includes(id));
+    }
+    document.getElementById("paused").setAttribute("visibility", s.paused ? "visible" : "hidden");
+    const dec = document.getElementById("decision");
+    if (s.decision) {
+      const t = document.getElementById("decision-text");
+      t.textContent = s.decision;
+      const w = s.decision.length * 6.6 + 28;
+      const r = document.getElementById("decision-bg");
+      r.setAttribute("width", w); r.setAttribute("x", 550 - w / 2);
+      dec.setAttribute("visibility", "visible");
+    } else dec.setAttribute("visibility", "hidden");
+  }
+  // packets
+  const packetsG = svg.querySelector(".packets");
+  packetsG.replaceChildren();
+  const myRun = runId;
+  (s.anims || []).forEach(a => animate(a, packetsG, myRun, live && !reduce));
+  // story
+  document.getElementById("stepno").textContent = `${S.name}  |  slide ${step + 1} of ${S.steps.length}`;
+  document.getElementById("lesson").textContent = s.lesson || "";
+  document.getElementById("title").textContent = s.title;
+  document.getElementById("text").textContent = s.text;
+  const code = document.getElementById("code");
+  code.textContent = s.code || ""; code.style.display = s.code ? "" : "none";
+  const log = document.getElementById("log");
+  log.innerHTML = s.log ? (S.graph ? "output: " : "log: ") + s.log : ""; log.style.display = s.log ? "" : "none";
+  fillList(document.getElementById("state"), s.state);
+  const extraWrap = document.getElementById("extra-wrap");
+  if (s.extra) {
+    document.getElementById("extra-title").textContent = s.extra.title;
+    fillList(document.getElementById("extra"), s.extra.rows);
+    extraWrap.style.display = "";
+  } else extraWrap.style.display = "none";
+  // controls
+  document.getElementById("prev").disabled = step === 0;
+  document.getElementById("next").disabled = step === S.steps.length - 1;
+  const dots = document.getElementById("dots");
+  dots.replaceChildren();
+  S.steps.forEach((_, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "dot" + (i <= step ? " on" : "");
+    b.setAttribute("aria-label", `Step ${i + 1}`);
+    b.addEventListener("click", () => { stopPlay(); step = i; render(true); });
+    dots.appendChild(b);
+  });
+  document.querySelectorAll(".tab").forEach((t, i) => t.setAttribute("aria-selected", i === sc ? "true" : "false"));
+}
+
+function next() { const S = SCENARIOS[sc]; if (step < S.steps.length - 1) { step++; render(true); } else stopPlay(); }
+function prev() { stopPlay(); if (step > 0) { step--; render(false); } }
+function setScenario(i) { stopPlay(); sc = i; step = 0; render(true); }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("play").textContent = "Play"; } }
+function togglePlay() {
+  if (playTimer) return stopPlay();
+  document.getElementById("play").textContent = "Pause";
+  if (step === SCENARIOS[sc].steps.length - 1) { step = 0; render(true); }
+  playTimer = setInterval(next, 3200);
+}
+
+// tabs (a thin divider separates the AxiomCart scenarios from the lesson 20/21 pair)
+const tabs = document.getElementById("tabs");
+SCENARIOS.forEach((S, i) => {
+  if (S.graph && !SCENARIOS[i - 1].graph) {
+    const sep = document.createElement("span"); sep.className = "tab-sep"; sep.setAttribute("aria-hidden", "true");
+    tabs.appendChild(sep);
+  }
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "tab"; b.setAttribute("role", "tab"); b.id = "tab-" + S.id;
+  b.textContent = S.name; b.title = S.query;
+  b.addEventListener("click", () => setScenario(i));
+  tabs.appendChild(b);
+});
+document.getElementById("next").addEventListener("click", () => { stopPlay(); next(); });
+document.getElementById("prev").addEventListener("click", prev);
+document.getElementById("restart").addEventListener("click", () => { stopPlay(); step = 0; render(true); });
+document.getElementById("play").addEventListener("click", togglePlay);
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("button") && (e.key === " " || e.key === "Enter")) return;
+  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); stopPlay(); next(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+  else if (["1", "2", "3", "4", "5", "6"].includes(e.key)) setScenario(Number(e.key) - 1);
+});
+
+// Start on the two-agent scenario at rest, so the first frame shows the most interesting picture.
+sc = 2; step = 0; render(false);
+</script>
+</body>
+</html>

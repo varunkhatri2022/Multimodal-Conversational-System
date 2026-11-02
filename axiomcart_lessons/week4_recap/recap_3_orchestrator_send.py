@@ -8,20 +8,18 @@
 #     input only; what the node RETURNS is merged into the main state via reducers.
 #   - The synthesizer merges agent_results into one answer.
 #
-# WHY Send? The orchestrator hands out one job per task, with the task attached:
+# WHY Send? Node names say WHO runs. Send also says WHAT each one should do.
 #
-#   Customer asks                          Jobs handed out
-#   "Show me headphones"                   Send("search_agent", {"query": "headphones"})
-#   "Plan Paris and find hotels"           Send("search_agent", {"query": "hotels"})
-#                                          Send("planner_agent", {"query": "itinerary"})
-#   "Find hotels AND flights"              Send("search_agent", {"query": "hotels"})
-#                                          Send("search_agent", {"query": "flights"})
+#   Customer: "Find hotels AND flights in Paris"
 #
-#   - The number of jobs depends on the question, not on the graph.
-#   - Each agent gets only its own task (the payload), so it knows what to do.
-#   - Last row: the SAME agent gets two jobs, and both run at the same time.
-#     Returning plain node names can't do this: ["search_agent", "search_agent"]
-#     runs search_agent only once, and that run sees every task in the state.
+#   Without Send:  return ["search_agent"]
+#                  -> search_agent runs ONCE, with the whole state.
+#                     It must work out by itself what to search for.
+#
+#   With Send:     return [Send("search_agent", {"query": "hotels"}),
+#                          Send("search_agent", {"query": "flights"})]
+#                  -> search_agent runs TWICE, at the same time,
+#                     and each run gets only its own query.
 
 import operator
 from typing import Annotated, TypedDict
