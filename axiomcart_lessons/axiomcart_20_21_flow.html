@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop vs Subgraph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Two graphs side by side (lesson 20 left, lesson 21 right), driven by one shared step. */
+:root {
+  --bg: #f4f6f9; --panel: #ffffff; --ink: #172033; --muted: #5d677a; --line: #c3cad6;
+  --accent: #2563d6; --accent-soft: #dfe9fb;
+  --bad: #c2362f; --bad-soft: #fbe3e1; --ok: #23845a; --ok-soft: #dcf1e6;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141c; --panel: #161d28; --ink: #e5eaf2; --muted: #9aa6b8; --line: #364357;
+    --accent: #6ea2ff; --accent-soft: #1d2d4a;
+    --bad: #ff7b72; --bad-soft: #3d1f1f; --ok: #4fbf85; --ok-soft: #173426;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141c; --panel: #161d28; --ink: #e5eaf2; --muted: #9aa6b8; --line: #364357;
+  --accent: #6ea2ff; --accent-soft: #1d2d4a;
+  --bad: #ff7b72; --bad-soft: #3d1f1f; --ok: #4fbf85; --ok-soft: #173426;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1440px; margin: 0 auto; padding: 16px 20px 24px; display: grid; gap: 12px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 26px; margin: 0; }
+.sub { color: var(--muted); margin: 2px 0 0; }
+.problems { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.prob { font: 600 13px var(--font-body); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; background: var(--panel); color: var(--muted); }
+.prob b { font-family: var(--font-mono); }
+.prob.seen { border-color: var(--bad); background: var(--bad-soft); color: var(--ink); }
+.prob.now { border-color: var(--bad); background: var(--bad); color: #fff; }
+.moment { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; display: grid; gap: 4px; }
+.moment .no { font: 500 13px var(--font-mono); color: var(--muted); }
+.moment h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+.moment p { margin: 0; }
+.panes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; }
+.pane-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.pane h3 { font-family: var(--font-display); font-weight: 600; font-size: 19px; margin: 0; }
+.pane h3 span { color: var(--muted); font-weight: 500; }
+.runs { display: flex; gap: 6px; }
+.run { font: 600 12px var(--font-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; background: var(--bg); }
+.run.done { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.run.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pane svg { display: block; width: 100%; height: auto; }
+.caption { padding: 8px 10px; border-radius: 6px; background: var(--bg); border-left: 4px solid var(--line); min-height: 3.2em; }
+.caption.bad { background: var(--bad-soft); border-left-color: var(--bad); }
+.caption.ok { background: var(--ok-soft); border-left-color: var(--ok); }
+.out { font: 13px/1.5 var(--font-mono); color: var(--muted); min-height: 1.5em; }
+.out b { color: var(--ink); font-weight: 500; }
+.state h4 { font: 600 12px var(--font-body); text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin: 6px 0 4px; }
+.state ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.state li { font: 13px/1.45 var(--font-mono); display: grid; grid-template-columns: 112px 1fr; gap: 8px; padding: 3px 6px; border-radius: 5px; }
+.state .k { color: var(--muted); }
+.state .v { word-break: break-word; }
+.state li.new { background: var(--accent-soft); }
+.state li.bad { background: var(--bad-soft); }
+.state li.ok { background: var(--ok-soft); }
+.tag { font: 600 10px var(--font-body); letter-spacing: 0.5px; border-radius: 3px; padding: 1px 4px; margin-left: 6px; vertical-align: 1px; color: #fff; }
+li.new .tag { background: var(--accent); }
+li.bad .tag { background: var(--bad); }
+li.ok .tag { background: var(--ok); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.btn { font: 600 14px var(--font-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 16px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn:focus-visible, .dot:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dot { width: 22px; height: 6px; border-radius: 3px; background: var(--line); border: 0; padding: 0; cursor: pointer; }
+.dot.on { background: var(--accent); }
+.hint { color: var(--muted); font-size: 13px; margin-left: auto; }
+
+/* SVG */
+.g-node rect, .g-node circle { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; transition: stroke 0.25s, fill 0.25s; }
+.g-node.sub > rect { fill: var(--bg); }
+.g-node text { fill: var(--ink); font: 600 15px var(--font-body); text-anchor: middle; }
+.g-node text.s { fill: var(--muted); font-size: 11.5px; font-weight: 400; }
+.g-node text.m { font: 12px var(--font-mono); fill: var(--muted); }
+.g-node text.m.bad { fill: var(--bad); font-weight: 500; }
+.g-node text.m.ok { fill: var(--ok); font-weight: 500; }
+.g-node.end text, .g-node.start text { font-size: 9px; }
+.g-node.active > rect, .g-node.active > circle { stroke: var(--accent); stroke-width: 3; }
+.g-node.bad > rect { stroke: var(--bad); stroke-width: 3; fill: var(--bad-soft); }
+.g-node.ok > rect { stroke: var(--ok); stroke-width: 3; fill: var(--ok-soft); }
+.frame { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.frame-label { fill: var(--muted); font: 600 11px var(--font-body); letter-spacing: 0.8px; }
+.note { font: 600 12px var(--font-body); }
+.note.bad { fill: var(--bad); }
+.note.ok { fill: var(--ok); }
+.note.plain { fill: var(--muted); font-weight: 400; }
+.edge { fill: none; stroke: var(--line); stroke-width: 2; marker-end: url(#arrow); transition: stroke 0.25s; }
+.edge.lit { stroke: var(--accent); stroke-width: 2.6; marker-end: url(#arrow-lit); }
+.elabel { fill: var(--muted); font: 11px var(--font-mono); text-anchor: middle; }
+svg.finished { opacity: 0.45; transition: opacity 0.3s; }
+.packet circle { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.packet rect { fill: var(--ink); }
+.packet text { fill: var(--panel); font: 500 11px var(--font-mono); text-anchor: middle; }
+@media (max-width: 1000px) { .panes { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Lesson 20 vs Lesson 21: where does the tool loop live?</h1>
+    <p class="sub">Same question, same agents, two graphs. One Next button moves both, lined up by main-graph STEP. Watch the left side for two problems:</p>
+    <div class="problems">
+      <span class="prob" id="probA"><b>A</b> &nbsp;synthesizer runs too early (and twice)</span>
+      <span class="prob" id="probB"><b>B</b> &nbsp;trip_agent forgets its task</span>
+    </div>
+  </header>
+
+  <section class="moment" aria-live="polite">
+    <span class="no" id="no"></span>
+    <h2 id="title"></h2>
+    <p id="note"></p>
+  </section>
+
+  <div class="panes">
+    <!-- LEFT: lesson 20 -->
+    <section class="pane">
+      <div class="pane-head">
+        <h3>Lesson 20 <span>loop in the main graph</span></h3>
+        <div class="runs" id="runs20"><span class="run">STEP 1</span><span class="run">STEP 2</span><span class="run">STEP 3</span><span class="run">STEP 4</span></div>
+      </div>
+      <svg id="svg20" viewBox="0 0 560 360" role="img" aria-label="Lesson 20: START sends to hotel_agent and trip_agent; trip_agent loops through tool in the main graph; both lead to the synthesizer, then END.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8f99aa"/></marker>
+          <marker id="arrow-lit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563d6"/></marker>
+        </defs>
+        <rect class="frame" x="6" y="6" width="548" height="348" rx="10"/>
+        <text class="frame-label" x="18" y="26">MAIN GRAPH</text>
+        <path class="edge" id="e-l20_start_hotel" d="M56,170 C80,170 80,79 95,79"/>
+        <path class="edge" id="e-l20_start_trip" d="M56,170 C80,170 80,229 95,229"/>
+        <path class="edge" id="e-l20_hotel_synth" d="M285,79 C330,79 325,160 370,160"/>
+        <path class="edge" id="e-l20_trip_synth" d="M285,229 C330,229 325,180 370,180"/>
+        <path class="edge" id="e-l20_trip_tool" d="M165,258 L165,290"/>
+        <path class="edge" id="e-l20_tool_trip" d="M205,290 L205,258"/>
+        <path class="edge" id="e-l20_synth_end" d="M500,170 L512,170"/>
+        <text class="elabel" x="330" y="244">route_trip</text>
+        <text class="note bad" x="275" y="317">loop wired into the MAIN graph</text>
+        <g class="g-node start" id="n-l20_start"><circle cx="40" cy="170" r="16"/><text x="40" y="173">START</text></g>
+        <g class="g-node" id="n-l20_hotel"><rect x="95" y="50" width="190" height="58" rx="8"/><text x="190" y="74">hotel_agent</text><text class="m" x="190" y="96">task = 'hotels in Jaipur'</text></g>
+        <g class="g-node" id="n-l20_trip"><rect x="95" y="200" width="190" height="58" rx="8"/><text x="190" y="224">trip_agent</text><text class="m" id="task20" x="190" y="246"></text></g>
+        <g class="g-node" id="n-l20_tool"><rect x="110" y="290" width="150" height="44" rx="8"/><text x="185" y="317">tool</text></g>
+        <g class="g-node" id="n-l20_synth"><rect x="370" y="141" width="130" height="58" rx="8"/><text x="435" y="167">synthesizer</text><text class="s" x="435" y="185">merges results</text></g>
+        <g class="g-node end" id="n-l20_end"><circle cx="530" cy="170" r="16"/><text x="530" y="173">END</text></g>
+        <g class="packets"></g>
+      </svg>
+      <div class="caption" id="cap20"></div>
+      <div class="out" id="out20"></div>
+      <div class="state" id="state20"></div>
+    </section>
+
+    <!-- RIGHT: lesson 21 -->
+    <section class="pane">
+      <div class="pane-head">
+        <h3>Lesson 21 <span>loop in a subgraph</span></h3>
+        <div class="runs" id="runs21"><span class="run">STEP 1</span><span class="run">STEP 2</span></div>
+      </div>
+      <svg id="svg21" viewBox="0 0 560 360" role="img" aria-label="Lesson 21: START sends to hotel_agent and trip_agent; trip_agent runs its think and tool loop inside a private subgraph; a join edge waits for both agents before the synthesizer, then END.">
+        <rect class="frame" x="6" y="6" width="548" height="348" rx="10"/>
+        <text class="frame-label" x="18" y="26">MAIN GRAPH</text>
+        <path class="edge" id="e-l21_start_hotel" d="M56,170 C80,170 80,79 95,79"/>
+        <path class="edge" id="e-l21_start_trip" d="M56,170 C80,170 80,265 100,265"/>
+        <path class="edge" id="e-l21_hotel_synth" d="M285,79 C330,79 325,160 370,160"/>
+        <path class="edge" id="e-l21_trip_synth" d="M340,265 C362,265 345,180 370,180"/>
+        <path class="edge" id="e-l21_think_tool" d="M205,250 L235,250"/>
+        <path class="edge" id="e-l21_tool_think" d="M235,268 L205,268"/>
+        <path class="edge" id="e-l21_synth_end" d="M500,170 L512,170"/>
+        <text class="note plain" x="435" y="130" text-anchor="middle">join: waits for both</text>
+        <g class="g-node start" id="n-l21_start"><circle cx="40" cy="170" r="16"/><text x="40" y="173">START</text></g>
+        <g class="g-node" id="n-l21_hotel"><rect x="95" y="50" width="190" height="58" rx="8"/><text x="190" y="74">hotel_agent</text><text class="m" x="190" y="96">task = 'hotels in Jaipur'</text></g>
+        <g class="g-node" id="n-l21_trip"><rect x="100" y="185" width="240" height="160" rx="10"/><text x="220" y="206">trip_agent</text><text class="s" x="220" y="222">runs trip_subgraph, with private state</text></g>
+        <g class="g-node sub" id="n-l21_think"><rect x="115" y="236" width="90" height="44" rx="6"/><text x="160" y="263">think</text></g>
+        <g class="g-node sub" id="n-l21_tool"><rect x="235" y="236" width="90" height="44" rx="6"/><text x="280" y="263">tool</text></g>
+        <g class="g-node"><text class="m" id="task21" x="220" y="305"></text><text class="note ok" x="220" y="330" text-anchor="middle">loop lives in the SUBGRAPH</text></g>
+        <g class="g-node" id="n-l21_synth"><rect x="370" y="141" width="130" height="58" rx="8"/><text x="435" y="167">synthesizer</text><text class="s" x="435" y="185">merges results</text></g>
+        <g class="g-node end" id="n-l21_end"><circle cx="530" cy="170" r="16"/><text x="530" y="173">END</text></g>
+        <g class="packets"></g>
+      </svg>
+      <div class="caption" id="cap21"></div>
+      <div class="out" id="out21"></div>
+      <div class="state" id="state21"></div>
+    </section>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="prev" type="button">Previous</button>
+    <button class="btn primary" id="next" type="button">Next</button>
+    <button class="btn" id="play" type="button">Play</button>
+    <button class="btn" id="restart" type="button">Restart</button>
+    <div class="dots" id="dots" aria-label="Steps"></div>
+    <span class="hint">Keys: right arrow or space = next, left arrow = back</span>
+  </div>
+</div>
+
+<script>
+// ---- Data: one "moment" moves both graphs. Values are from running axiomcart_20.py / axiomcart_21.py.
+// prob: which problem chip is lit on this slide ("A", "B"); seen: chips already shown.
+const TAGS = { new: "CHANGED", bad: "PROBLEM", ok: "FIXED" };
+const HOTEL = '"hotel_agent: hotels in Jaipur"';
+const TASK = "task = '3-day Jaipur plan'";
+
+const MOMENTS = [
+  { title: "Two graphs, one difference: where trip_agent's tool loop lives",
+    note: "hotel_agent answers right away. trip_agent must call a tool first, then answer. Left: the loop trip_agent → tool → trip_agent is part of the main graph, so each turn is a new STEP. Right: the loop think → tool → think runs inside trip_agent, so the main graph sees one node.",
+    seen: [],
+    l20: { run: 0, task: "",
+           caption: "Each arrow in the loop is a main-graph edge. Every turn of the loop costs one STEP.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[]" }, { k: "trip_messages", v: "[]" }] }] },
+    l21: { run: 0, task: "",
+           caption: "The loop is a small graph (a subgraph) that trip_agent calls like a function.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[]" }] }] } },
+
+  { title: "STEP 1 starts: the same two Sends on both sides",
+    note: "Both graphs start the same way. dispatch sends one job to each agent, and each job carries its task.",
+    seen: [],
+    l20: { run: 1, anims: [{ e: "l20_start_hotel", label: "hotels" }, { e: "l20_start_trip", label: "3-day plan" }],
+           on: ["l20_start", "l20_hotel", "l20_trip"], task: TASK,
+           caption: "trip_agent gets its task from the Send payload.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[]" }, { k: "trip_messages", v: "[]" }] }] },
+    l21: { run: 1, anims: [{ e: "l21_start_hotel", label: "hotels" }, { e: "l21_start_trip", label: "3-day plan" }],
+           on: ["l21_start", "l21_hotel", "l21_trip"], task: TASK,
+           caption: "trip_agent starts its subgraph and stores the task in the subgraph's own state.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[]" }] },
+                   { title: "Subgraph's private state", rows: [{ k: "task", v: '"3-day Jaipur plan"', tag: "new" }, { k: "messages", v: "[]" }] }] } },
+
+  { title: "trip_agent needs a tool",
+    note: "Watch where the loop runs. Left: the tool is a main-graph node, so it has to wait for the next STEP. Right: the tool is inside trip_agent, so it runs right away.",
+    seen: [],
+    l20: { run: 1, anims: [], on: ["l20_hotel", "l20_trip"], task: TASK,
+           caption: "hotel_agent answers. trip_agent asks for the tool and its run ends. STEP 1 is over.",
+           out: "trip_agent sees task = <b>'3-day Jaipur plan'</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + "]", tag: "new" }, { k: "trip_messages", v: '["need tool"]', tag: "new" }] }] },
+    l21: { run: 1, anims: [{ e: "l21_think_tool", label: "need tool" }], on: ["l21_hotel", "l21_trip", "l21_think", "l21_tool"], task: TASK,
+           caption: "think asks for the tool, and the tool runs immediately, still inside STEP 1.",
+           out: "think sees task = <b>'3-day Jaipur plan'</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[]  (applied when STEP 1 ends)" }] },
+                   { title: "Subgraph's private state", rows: [{ k: "task", v: '"3-day Jaipur plan"' }, { k: "messages", v: '["need tool"]', tag: "new" }] }] } },
+
+  { title: "Right side: the whole loop finishes inside STEP 1",
+    note: "The right graph is still in STEP 1. The left graph already ended STEP 1 and is waiting to start STEP 2.",
+    seen: [],
+    l20: { run: 1, anims: [], on: [], task: TASK,
+           caption: "(waiting) The tool is a separate main-graph node, so it can only run in STEP 2.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + "]" }, { k: "trip_messages", v: '["need tool"]' }] }] },
+    l21: { run: 1, anims: [{ e: "l21_tool_think", label: "tool result" }], on: ["l21_trip"], ok: ["l21_think"], task: TASK, taskTone: "ok",
+           caption: "tool goes back to think. think still knows its task, writes the answer, and the subgraph ends. Both agents return, and STEP 1 ends.",
+           out: "think sees task = <b>'3-day Jaipur plan'</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]', tag: "new" }] },
+                   { title: "Subgraph's private state", rows: [{ k: "task", v: '"3-day Jaipur plan"', tag: "ok" }, { k: "messages", v: '["need tool", "tool result", "done"]', tag: "new" }] }] } },
+
+  { title: "STEP 2, problem A: the synthesizer runs too early",
+    note: "Left: hotel_agent finished, so its edge fires the synthesizer, even though trip_agent is still mid-loop. Right: both agents finished in STEP 1, so the synthesizer sees both results.",
+    prob: "A", seen: [],
+    l20: { run: 2, anims: [{ e: "l20_hotel_synth", label: "hotel" }, { e: "l20_trip_tool", label: "need tool" }],
+           on: ["l20_tool"], bad: ["l20_synth"], task: TASK, tone: "bad",
+           caption: "✗ PROBLEM A: synthesizer runs with only the hotel result. The tool runs at the same time.",
+           out: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur']</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + "]", tag: "bad" }, { k: "trip_messages", v: '["need tool", "tool result"]', tag: "new" }] }] },
+    l21: { run: 2, anims: [{ e: "l21_hotel_synth", label: "hotel" }, { e: "l21_trip_synth", label: "trip" }, { e: "l21_synth_end", d: 1300 }],
+           on: ["l21_end"], ok: ["l21_synth"], task: TASK, tone: "ok",
+           caption: "✓ synthesizer runs once, with both results. Finished in 2 STEPs.",
+           out: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: 3-day Jaipur plan']</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]', tag: "ok" }] }] } },
+
+  { title: "STEP 3, problem B: trip_agent forgets its task",
+    note: "The task came in the Send payload, and a Send payload is the input for ONE call only. Now tool → trip_agent is a normal edge, so trip_agent gets the main state, and the main state has no \"task\" key.",
+    prob: "B", seen: ["A"],
+    l20: { run: 3, anims: [{ e: "l20_tool_trip", label: "tool result" }], bad: ["l20_trip"], task: "task = None", taskTone: "bad", tone: "bad",
+           caption: "✗ PROBLEM B: trip_agent runs again with task = None, and answers \"trip_agent: None\".",
+           out: "trip_agent sees task = <b>None</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: None"]', tag: "bad" }, { k: "trip_messages", v: '["need tool", "tool result", "done"]', tag: "new" }] }] },
+    l21: { finished: true, run: 2, task: TASK, tone: "ok", caption: "Finished in STEP 2. Inside the subgraph, task is part of its own state, so think saw it on both visits.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]' }] }] } },
+
+  { title: "STEP 4, problem A again: the synthesizer runs a second time",
+    note: "One question, two synthesizer runs on the left. With a real LLM, that is two calls, and the first one saw only half the answer.",
+    prob: "A", seen: ["B"],
+    l20: { run: 4, anims: [{ e: "l20_trip_synth", label: "trip: None" }, { e: "l20_synth_end", d: 1300 }],
+           on: ["l20_end"], bad: ["l20_synth"], task: "task = None", taskTone: "bad", tone: "bad",
+           caption: "✗ PROBLEM A: route_trip now points to synthesizer, so it runs again.",
+           out: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: None']</b>",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: None"]' }, { k: "trip_messages", v: '["need tool", "tool result", "done"]' }] }] },
+    l21: { finished: true, run: 2, task: TASK, tone: "ok", caption: "Finished in STEP 2.",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]' }] }] } },
+
+  { title: "Summary: a subgraph turns the whole loop into ONE step of the main graph",
+    note: "A: on the left, every turn of the loop is a new STEP, so the hotel edge fires the synthesizer in between. B: the loop comes back through a normal edge, which carries no Send payload. On the right, the loop runs inside one node call, with the task in its own state. AxiomCart's product and support agents work like the right side.",
+    seen: ["A", "B"],
+    l20: { run: 4, bad: ["l20_synth", "l20_trip"], task: "task = None", taskTone: "bad", tone: "bad",
+           caption: "4 STEPs  |  A: synthesizer ran 2 times  |  B: task lost",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: None"]', tag: "bad" }, { k: "trip_messages", v: '["need tool", "tool result", "done"]' }] }] },
+    l21: { run: 2, ok: ["l21_synth", "l21_trip"], task: TASK, taskTone: "ok", tone: "ok",
+           caption: "2 STEPs  |  A: synthesizer ran 1 time  |  B: task kept",
+           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]', tag: "ok" }] }] } },
+];
+
+// ---- Rendering --------------------------------------------------------------
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let step = 0, runId = 0, playTimer = null;
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const a in attrs) n.setAttribute(a, attrs[a]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+
+function place(g, path, frac) {
+  const p = path.getPointAtLength(Math.max(0, Math.min(1, frac)) * path.getTotalLength());
+  g.setAttribute("transform", `translate(${p.x},${p.y})`);
+}
+
+function animate(anim, parent, myRun, live) {
+  const path = document.getElementById("e-" + anim.e);
+  const g = el("g", { class: "packet" }, parent);
+  el("circle", { r: 7 }, g);
+  if (anim.label) {
+    const w = anim.label.length * 6.7 + 12;
+    el("rect", { x: -w / 2, y: -28, width: w, height: 18, rx: 4 }, g);
+    el("text", { x: 0, y: -15 }, g).textContent = anim.label;
+  }
+  if (!live) { place(g, path, 1); g.querySelectorAll("rect, text").forEach(n => n.remove()); return; }
+  place(g, path, 0);
+  g.style.visibility = "hidden";
+  setTimeout(() => {
+    if (myRun !== runId) return;
+    g.style.visibility = "visible";
+    const t0 = performance.now();
+    function tick(now) {
+      if (myRun !== runId) return;
+      let k = Math.min(1, (now - t0) / 1100);
+      k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;   // ease in-out
+      place(g, path, k);
+      if (k < 1) requestAnimationFrame(tick);
+      else g.querySelectorAll("rect, text").forEach(n => n.remove());   // arrived: keep only the dot
+    }
+    requestAnimationFrame(tick);
+  }, anim.d || 0);
+}
+
+function renderPane(key, p, myRun, live) {
+  const svg = document.getElementById("svg" + key);
+  svg.querySelectorAll('.g-node[id^="n-"]').forEach(n => {
+    const id = n.id.slice(2);
+    n.classList.toggle("active", (p.on || []).includes(id));
+    n.classList.toggle("bad", (p.bad || []).includes(id));
+    n.classList.toggle("ok", (p.ok || []).includes(id));
+  });
+  const used = new Set((p.anims || []).map(a => a.e));
+  svg.querySelectorAll(".edge").forEach(e => e.classList.toggle("lit", used.has(e.id.slice(2))));
+  svg.classList.toggle("finished", !!p.finished);
+  const task = document.getElementById("task" + key);
+  task.textContent = p.task || "";
+  task.setAttribute("class", "m" + (p.taskTone ? " " + p.taskTone : ""));
+  const packets = svg.querySelector(".packets");
+  packets.replaceChildren();
+  (p.anims || []).forEach(a => animate(a, packets, myRun, live));
+  // STEP chips
+  document.querySelectorAll("#runs" + key + " .run").forEach((r, i) => {
+    r.classList.toggle("on", i + 1 === p.run && !p.finished);
+    r.classList.toggle("done", i + 1 < p.run || (p.finished && i + 1 === p.run));
+  });
+  // caption, output, state
+  const cap = document.getElementById("cap" + key);
+  cap.textContent = p.caption || "";
+  cap.className = "caption" + (p.tone ? " " + p.tone : "");
+  const out = document.getElementById("out" + key);
+  out.innerHTML = p.out ? "output: " + p.out : "";
+  const box = document.getElementById("state" + key);
+  box.replaceChildren();
+  for (const block of p.state || []) {
+    const h = document.createElement("h4"); h.textContent = block.title; box.appendChild(h);
+    const ul = document.createElement("ul");
+    for (const row of block.rows) {
+      const li = document.createElement("li");
+      if (row.tag) li.className = row.tag;
+      const k = document.createElement("span"); k.className = "k"; k.textContent = row.k;
+      const v = document.createElement("span"); v.className = "v"; v.textContent = row.v;
+      if (row.tag) { const t = document.createElement("span"); t.className = "tag"; t.textContent = TAGS[row.tag]; v.appendChild(t); }
+      li.append(k, v); ul.appendChild(li);
+    }
+    box.appendChild(ul);
+  }
+}
+
+function render(live) {
+  runId++;
+  const m = MOMENTS[step];
+  document.getElementById("no").textContent = `slide ${step + 1} of ${MOMENTS.length}`;
+  document.getElementById("title").textContent = m.title;
+  document.getElementById("note").textContent = m.note;
+  for (const name of ["A", "B"]) {
+    const chip = document.getElementById("prob" + name);
+    chip.classList.toggle("now", m.prob === name);
+    chip.classList.toggle("seen", m.prob !== name && m.seen.includes(name));
+  }
+  renderPane("20", m.l20, runId, live && !reduce);
+  renderPane("21", m.l21, runId, live && !reduce);
+  document.getElementById("prev").disabled = step === 0;
+  document.getElementById("next").disabled = step === MOMENTS.length - 1;
+  const dots = document.getElementById("dots");
+  dots.replaceChildren();
+  MOMENTS.forEach((_, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "dot" + (i <= step ? " on" : "");
+    b.setAttribute("aria-label", `Step ${i + 1}`);
+    b.addEventListener("click", () => { stopPlay(); step = i; render(true); });
+    dots.appendChild(b);
+  });
+}
+
+function next() { if (step < MOMENTS.length - 1) { step++; render(true); } else stopPlay(); }
+function prev() { stopPlay(); if (step > 0) { step--; render(false); } }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("play").textContent = "Play"; } }
+function togglePlay() {
+  if (playTimer) return stopPlay();
+  document.getElementById("play").textContent = "Pause";
+  if (step === MOMENTS.length - 1) { step = 0; render(true); }
+  playTimer = setInterval(next, 4000);
+}
+
+document.getElementById("next").addEventListener("click", () => { stopPlay(); next(); });
+document.getElementById("prev").addEventListener("click", prev);
+document.getElementById("restart").addEventListener("click", () => { stopPlay(); step = 0; render(true); });
+document.getElementById("play").addEventListener("click", togglePlay);
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("button") && (e.key === " " || e.key === "Enter")) return;
+  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); stopPlay(); next(); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+});
+
+render(false);
+</script>
+</body>
+</html>

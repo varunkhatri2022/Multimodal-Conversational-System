@@ -2,7 +2,16 @@
 
 Same scenario in both files: `hotel_agent` answers right away, `trip_agent` needs a tool first.
 The only difference is **where `trip_agent`'s loop lives**. Each `STATE` box is the shared state
-after that step.
+after that step. Animated version: [axiomcart_20_21_flow.html](axiomcart_20_21_flow.html).
+
+Watch lesson 20 for two problems:
+
+- **A. The synthesizer runs too early, and then again.** hotel_agent takes 1 step, trip_agent's loop
+  takes 3. The synthesizer runs each time a branch reaches it.
+- **B. trip_agent forgets its task.** A `Send` payload is the input for ONE call. The loop comes back
+  through a normal edge, which passes the main state, and the main state has no `task`.
+
+In one line: **a subgraph turns the whole loop into ONE step of the main graph.**
 
 ## Lesson 20: loop in the MAIN graph ([axiomcart_20.py](axiomcart_20.py))
 
@@ -27,7 +36,7 @@ after that step.
             ┌─────────────┐                                 ┌─────────────┐
   STEP 2    │ synthesizer │                                 │    tool     │
             └──────┬──────┘                                 └──────┬──────┘
-                   │  ✗ PROBLEM 1: runs EARLY,                     │
+                   │  ✗ PROBLEM A: runs EARLY,                     │
                    │     sees only the hotel result                │
                    ▼                                               │
                   END  (hotel branch done)                         │
@@ -42,20 +51,19 @@ after that step.
                                                             ┌─────────────┐
   STEP 3                                                    │ trip_agent  │
                                                             └──────┬──────┘
-                                                                   │  ✗ PROBLEM 2: sees task = None
+                                                                   │  ✗ PROBLEM B: sees task = None
                                                                    │    (main state has no "task")
 ┌──────────────────────────────────────────────────────────────────┴──────────────────┐
 │ STATE after step 3                                                                  │
 │   results       = ["hotel_agent: hotels in Jaipur", "trip_agent: None"]             │
 │   trip_messages = ["need tool", "tool result", "done"]                              │
-│   ✗ PROBLEM 3: the loop's working messages sit in the main state                    │
 └──────────────────────────────────────────────────────────────────┬──────────────────┘
                                                                    │ route_trip → "synthesizer"
                                                                    ▼
                                                             ┌─────────────┐
   STEP 4                                                    │ synthesizer │
                                                             └──────┬──────┘
-                                                                   │  ✗ runs AGAIN, sees "trip_agent: None"
+                                                                   │  ✗ PROBLEM A again: runs AGAIN
                                                                    ▼
                                                                   END
 ```
@@ -83,7 +91,7 @@ after that step.
 ┌──────────────────┴───────────────────────────────────────────────┴──────────────────┐
 │ STATE after step 1                                                                  │
 │   results = ["hotel_agent: hotels in Jaipur", "trip_agent: 3-day Jaipur plan"]      │
-│   ✓ both agents finished in ONE step   ✓ no trip_messages in the main state         │
+│   ✓ both agents finished in ONE step   ✓ trip_agent kept its task                   │
 └──────────────────────────────────────────┬──────────────────────────────────────────┘
                                            ▼
                                     ┌─────────────┐

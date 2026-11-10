@@ -5,8 +5,8 @@
 #   trip_agent  -> calls a tool, then answers (a loop: trip_agent -> tool -> trip_agent)
 #
 # The loop is wired into the MAIN graph. Watch for two problems:
-#   1. trip_agent's 2nd call has lost its task (the Send payload is for the 1st call only).
-#   2. synthesizer runs TWICE: first with only the hotel result.
+#   A. synthesizer runs TWICE: first with only the hotel result.
+#   B. trip_agent's 2nd call has lost its task (the Send payload is for the 1st call only).
 # axiomcart_21.py is the same scenario, fixed with a subgraph.
 
 import operator

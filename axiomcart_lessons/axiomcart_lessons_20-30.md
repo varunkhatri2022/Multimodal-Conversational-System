@@ -16,6 +16,7 @@ python axiomcart_lessons/axiomcart_20.py
 | [23](axiomcart_23.py) | Custom reducer that resets between turns | `agent_results_reducer` in `state.py` |
 | [26](axiomcart_26.py) | `interrupt()` / `Command(resume=...)` basics, node re-execution | `support_model`, `main.py` resume loop |
 | [27](axiomcart_27.py) | HITL inside a subgraph inside a parallel branch | `support_subgraph` + `support_agent()` |
+| [28](axiomcart_28.py) | Several interrupts: in a row (matched by order) and in parallel (resume by interrupt id) | `main.py` answers `__interrupt__[0]` only |
 | [29](axiomcart_29.py) | Voice as an adapter: STT → graph → TTS ([speech models and pricing](axiomcart_29_speech_models.md)) | `voice.py`, `voice_loop()` |
 
 After lesson 29, move to the real project in `axiomcart-ai-assistant/src` (reading order below). To try it, use [axiomcart_sample_questions.md](axiomcart_sample_questions.md).

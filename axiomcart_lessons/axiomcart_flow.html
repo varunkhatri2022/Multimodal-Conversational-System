@@ -78,7 +78,6 @@ li.wait .tag { background: var(--wait); color: #fff; }
 .state li.ok { background: var(--ok-soft); }
 li.bad .tag { background: var(--bad); color: #fff; }
 li.ok .tag { background: var(--ok); color: #fff; }
-.tab-sep { width: 1px; background: var(--line); margin: 2px 4px; }
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .btn { font: 600 14px var(--font-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 7px; padding: 8px 16px; cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -107,18 +106,6 @@ li.ok .tag { background: var(--ok); color: #fff; }
 .note { fill: var(--muted); font: 12px var(--font-body); }
 .note.bad { fill: var(--bad); font-weight: 600; }
 .note.ok { fill: var(--ok); font-weight: 600; }
-.run rect { fill: var(--bg); stroke: var(--line); }
-.run text { fill: var(--muted); font: 600 12px var(--font-mono); text-anchor: middle; }
-.run.done rect { fill: var(--accent-soft); stroke: var(--accent); }
-.run.on rect { fill: var(--accent); stroke: var(--accent); }
-.run.on text { fill: #fff; }
-/* the lesson 20/21 graphs have fewer nodes, so their text can be larger */
-#svg-l20 .g-node text, #svg-l21 .g-node text { font-size: 17px; }
-#svg-l20 .g-node text.s, #svg-l21 .g-node text.s { font-size: 13px; }
-#svg-l21 .g-node text.m { font-size: 12.5px; }
-#svg-l20 #n-start20 text, #svg-l20 #n-end20 text, #svg-l21 #n-start21 text, #svg-l21 #n-end21 text { font-size: 9.5px; }
-#svg-l20 .note, #svg-l21 .note { font-size: 14px; }
-#svg-l20 .elabel, #svg-l21 .elabel { font-size: 12.5px; }
 .edge { fill: none; stroke: var(--line); stroke-width: 2; marker-end: url(#arrow); transition: stroke 0.25s; }
 .edge.lit { stroke: var(--accent); stroke-width: 2.6; marker-end: url(#arrow-lit); }
 .edge.int { stroke-dasharray: 6 5; }
@@ -146,7 +133,7 @@ li.ok .tag { background: var(--ok); color: #fff; }
   <header>
     <div>
       <h1>AxiomCart Request Flow</h1>
-      <p class="sub">Follow one customer question through the graph, one step at a time. Tabs 5 and 6: why each agent's loop runs as a subgraph (lessons 20, 21).</p>
+      <p class="sub">Follow one customer question through the graph, one step at a time.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Scenario" id="tabs"></div>
   </header>
@@ -219,65 +206,6 @@ li.ok .tag { background: var(--ok); color: #fff; }
         <g class="packets"></g>
       </svg>
 
-      <svg id="svg-l20" class="gsvg" viewBox="0 0 1100 600" role="img" aria-label="Lesson 20 graph: START sends to hotel_agent and trip_agent; trip_agent loops through tool in the main graph; both lead to the synthesizer, then END." style="display:none">
-        <g class="run" data-run="1"><rect x="330" y="18" width="110" height="30" rx="15"/><text x="385" y="38">STEP 1</text></g>
-        <g class="run" data-run="2"><rect x="460" y="18" width="110" height="30" rx="15"/><text x="515" y="38">STEP 2</text></g>
-        <g class="run" data-run="3"><rect x="590" y="18" width="110" height="30" rx="15"/><text x="645" y="38">STEP 3</text></g>
-        <g class="run" data-run="4"><rect x="720" y="18" width="110" height="30" rx="15"/><text x="775" y="38">STEP 4</text></g>
-        <text class="note" x="316" y="38" text-anchor="end">steps of the main graph:</text>
-        <rect class="frame" x="20" y="70" width="1060" height="510" rx="10"/>
-        <text class="frame-label" x="40" y="96">MAIN GRAPH: one shared state</text>
-
-        <path class="edge" id="e-a20_start_hotel" d="M110,310 C190,310 190,175 270,175"/>
-        <path class="edge" id="e-a20_start_trip" d="M110,310 C190,310 190,415 270,415"/>
-        <path class="edge" id="e-a20_hotel_synth" d="M440,175 C620,175 620,295 760,295"/>
-        <path class="edge" id="e-a20_trip_synth" d="M440,405 C620,405 620,325 760,325"/>
-        <path class="edge" id="e-a20_trip_tool" d="M330,450 L330,500"/>
-        <path class="edge" id="e-a20_tool_trip" d="M380,500 L380,450"/>
-        <path class="edge" id="e-a20_synth_end" d="M930,310 L988,310"/>
-        <text class="elabel" x="214" y="232">Send</text>
-        <text class="elabel" x="214" y="398">Send</text>
-        <text class="elabel" x="610" y="395">route_trip</text>
-        <text class="note bad" x="460" y="532">the tool loop is wired into the MAIN graph</text>
-
-        <g class="g-node" id="n-start20"><circle cx="90" cy="310" r="20"/><text x="90" y="314" style="font-size:9.5px">START</text></g>
-        <g class="g-node box" id="n-hotel20"><rect x="270" y="140" width="170" height="70" rx="8"/><text x="355" y="171">hotel_agent</text><text class="s" x="355" y="190">answers right away</text></g>
-        <g class="g-node box" id="n-trip20"><rect x="270" y="380" width="170" height="70" rx="8"/><text x="355" y="411">trip_agent</text><text class="s" x="355" y="430">needs a tool first</text></g>
-        <g class="g-node box" id="n-tool20"><rect x="270" y="500" width="170" height="56" rx="8"/><text x="355" y="533">tool</text></g>
-        <g class="g-node box" id="n-synth20"><rect x="760" y="275" width="170" height="70" rx="8"/><text x="845" y="306">synthesizer</text><text class="s" x="845" y="325">merges results</text></g>
-        <g class="g-node" id="n-end20"><circle cx="1010" cy="310" r="20"/><text x="1010" y="314" style="font-size:9.5px">END</text></g>
-        <g class="packets"></g>
-      </svg>
-
-      <svg id="svg-l21" class="gsvg" viewBox="0 0 1100 600" role="img" aria-label="Lesson 21 graph: START sends to hotel_agent and trip_agent; trip_agent runs its think and tool loop inside a private subgraph; a join edge waits for both agents before the synthesizer, then END." style="display:none">
-        <g class="run" data-run="1"><rect x="330" y="18" width="110" height="30" rx="15"/><text x="385" y="38">STEP 1</text></g>
-        <g class="run" data-run="2"><rect x="460" y="18" width="110" height="30" rx="15"/><text x="515" y="38">STEP 2</text></g>
-        <text class="note" x="316" y="38" text-anchor="end">steps of the main graph:</text>
-        <text class="note" x="590" y="38">(lesson 20 needed 4)</text>
-        <rect class="frame" x="20" y="70" width="1060" height="510" rx="10"/>
-        <text class="frame-label" x="40" y="96">MAIN GRAPH: one shared state</text>
-
-        <path class="edge" id="e-a21_start_hotel" d="M110,310 C190,310 190,175 270,175"/>
-        <path class="edge" id="e-a21_start_trip" d="M110,310 C190,310 190,440 270,440"/>
-        <path class="edge" id="e-a21_hotel_synth" d="M440,175 C620,175 640,295 760,295"/>
-        <path class="edge" id="e-a21_trip_synth" d="M600,440 C690,440 690,325 760,325"/>
-        <path class="edge" id="e-a21_think_tool" d="M400,420 L470,420"/>
-        <path class="edge" id="e-a21_tool_think" d="M470,440 L400,440"/>
-        <path class="edge" id="e-a21_synth_end" d="M930,310 L988,310"/>
-        <text class="elabel" x="214" y="232">Send</text>
-        <text class="elabel" x="214" y="410">Send</text>
-        <text class="note" x="845" y="262" text-anchor="middle">join: waits for both agents</text>
-
-        <g class="g-node" id="n-start21"><circle cx="90" cy="310" r="20"/><text x="90" y="314" style="font-size:9.5px">START</text></g>
-        <g class="g-node box" id="n-hotel21"><rect x="270" y="140" width="170" height="70" rx="8"/><text x="355" y="171">hotel_agent</text><text class="s" x="355" y="190">answers right away</text></g>
-        <g class="g-node box" id="n-trip21"><rect x="270" y="340" width="330" height="200" rx="10"/><text x="435" y="364">trip_agent</text><text class="s" x="435" y="381">calls trip_subgraph.invoke(...)</text></g>
-        <g class="g-node sub" id="n-think21"><rect class="inner" x="290" y="402" width="110" height="56" rx="6"/><text x="345" y="436">think</text></g>
-        <g class="g-node sub" id="n-tool21"><rect class="inner" x="470" y="402" width="110" height="56" rx="6"/><text x="525" y="436">tool</text></g>
-        <g class="g-node"><text class="m" x="435" y="490">private state: task, messages</text><text class="note ok" x="435" y="515" text-anchor="middle">the loop lives in the SUBGRAPH</text></g>
-        <g class="g-node box" id="n-synth21"><rect x="760" y="275" width="170" height="70" rx="8"/><text x="845" y="306">synthesizer</text><text class="s" x="845" y="325">merges results</text></g>
-        <g class="g-node" id="n-end21"><circle cx="1010" cy="310" r="20"/><text x="1010" y="314" style="font-size:9.5px">END</text></g>
-        <g class="packets"></g>
-      </svg>
     </figure>
 
     <section class="story" aria-live="polite">
@@ -287,7 +215,6 @@ li.ok .tag { background: var(--ok); color: #fff; }
       <div class="code" id="code"></div>
       <div class="log" id="log"></div>
       <div class="state"><h3>Main graph state after this step</h3><ul id="state"></ul></div>
-      <div class="state" id="extra-wrap"><h3 id="extra-title"></h3><ul id="extra"></ul></div>
     </section>
   </div>
 
@@ -297,7 +224,7 @@ li.ok .tag { background: var(--ok); color: #fff; }
     <button class="btn" id="play" type="button">Play</button>
     <button class="btn" id="restart" type="button">Restart</button>
     <div class="dots" id="dots" aria-label="Steps"></div>
-    <span class="hint">Keys: right arrow or space = next, left arrow = back, 1 to 6 = scenario</span>
+    <span class="hint">Keys: right arrow or space = next, left arrow = back, 1 to 4 = scenario</span>
   </div>
 </div>
 
@@ -306,11 +233,8 @@ li.ok .tag { background: var(--ok); color: #fff; }
 // Each step: what moves (anims), which nodes light up, the story text, and the main state after it.
 const EMPTY = { messages: "[]", user_query: '""', tasks: "[]", agent_results: "[]", final_answer: '""' };
 
-const S20 = { results: "[]", trip_messages: "[]" };   // lesson 20's main state
-const S21 = { results: "[]" };                          // lesson 21: no trip_messages
-
-function st(over, marks, base) {     // build a state list; marks = {key: "new" | "wait" | "bad" | "ok"}
-  const s = Object.assign({}, base || EMPTY, over);
+function st(over, marks) {           // build a state list; marks = {key: "new" | "wait"}
+  const s = Object.assign({}, EMPTY, over);
   return Object.keys(s).map(k => ({ k, v: s[k], tag: (marks || {})[k] || "" }));
 }
 
@@ -512,118 +436,6 @@ const SCENARIOS = [
         anims: [{ e: "end_main", label: "text" }, { e: "a_out", d: 1300, label: "audio" }], on: ["main", "tts", "customer", "mem"],
         state: st({ messages: '["Customer: Do you have ... headphones?"]', user_query: '"Do you have noise-cancelling headphones?"', tasks: '[product_agent: ...]', agent_results: '[product_discovery: "Sony ..., Bose ..."]', final_answer: '"We have Sony WH-1000XM5 and Bose QC45 ..."' }) },
     ]
-  },
-  {
-    id: "l20", name: "5. L20: loop in main graph", graph: "l20", query: "axiomcart_20.py: the tool loop is wired into the main graph",
-    steps: [
-      { run: 1, title: "STEP 1: dispatch sends two jobs", lesson: "L20 (uses R3)",
-        text: "dispatch returns two Send objects, so both agents start in STEP 1. Each one receives its own payload with its task.",
-        code: 'Send("hotel_agent", {"task": "hotels in Jaipur"})\nSend("trip_agent",  {"task": "3-day Jaipur plan"})',
-        anims: [{ e: "a20_start_hotel", label: "hotels in Jaipur" }, { e: "a20_start_trip", label: "3-day Jaipur plan" }],
-        on: ["start20", "hotel20", "trip20"],
-        state: st({}, {}, S20),
-        extra: { title: "What each agent receives (its Send payload)", rows: [
-          { k: "hotel_agent", v: '{"task": "hotels in Jaipur"}' },
-          { k: "trip_agent", v: '{"task": "3-day Jaipur plan"}' }] } },
-      { run: 1, title: "STEP 1 ends: hotel answers, trip asks for a tool", lesson: "L20",
-        text: "hotel_agent is done in one call. trip_agent needs a tool, so it writes \"need tool\" into trip_messages, which lives in the main state. Both updates are applied when STEP 1 ends.",
-        code: 'hotel_agent -> {"results": ["hotel_agent: hotels in Jaipur"]}\ntrip_agent  -> {"trip_messages": ["need tool"]}',
-        log: "trip_agent sees task = <b>'3-day Jaipur plan'</b>",
-        anims: [], on: ["hotel20", "trip20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool"]' }, { results: "new", trip_messages: "new" }, S20) },
-      { run: 2, title: "STEP 2: the edges pick the next nodes", lesson: "L20 (uses R1)",
-        text: "hotel_agent's edge points to synthesizer. route_trip sees \"need tool\" and points to tool. So synthesizer and tool both run in STEP 2, at the same time.",
-        code: 'builder.add_edge("hotel_agent", "synthesizer")\nroute_trip(state)  ->  "tool"',
-        anims: [{ e: "a20_hotel_synth", label: "hotel result" }, { e: "a20_trip_tool", label: "need tool" }],
-        on: ["synth20", "tool20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool"]' }, {}, S20) },
-      { run: 2, title: "✗ The synthesizer runs too early", lesson: "L20",
-        text: "The synthesizer does not know trip_agent is still in its loop. It runs with only the hotel result, so it produces half an answer.",
-        code: 'def synthesizer(state):\n    print(state["results"])   # only 1 of the 2 results',
-        log: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur']</b>",
-        anims: [], on: ["tool20"], bad: ["synth20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool", "tool result"]' }, { trip_messages: "new" }, S20),
-        extra: { title: "What the synthesizer sees", rows: [
-          { k: "results", v: '["hotel_agent: hotels in Jaipur"]', tag: "bad" },
-          { k: "missing", v: "trip_agent's answer: it is still in its loop", tag: "bad" }] } },
-      { run: 3, title: "✗ STEP 3: trip_agent runs again without its task", lesson: "L20",
-        text: "tool's edge goes back to trip_agent. This call does not come from a Send, so there is no payload. trip_agent receives the main state, and the main state has no \"task\" key.",
-        code: 'builder.add_edge("tool", "trip_agent")\ntask = state.get("task")   # None',
-        log: "trip_agent sees task = <b>None</b>",
-        anims: [{ e: "a20_tool_trip", label: "tool result" }], bad: ["trip20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur"]', trip_messages: '["need tool", "tool result"]' }, {}, S20),
-        extra: { title: "What trip_agent receives this time (the main state)", rows: [
-          { k: "results", v: '["hotel_agent: hotels in Jaipur"]' },
-          { k: "trip_messages", v: '["need tool", "tool result"]' },
-          { k: "task", v: "None: the Send payload was for the 1st call only", tag: "bad" }] } },
-      { run: 3, title: "trip_agent answers \"None\"", lesson: "L20",
-        text: "trip_agent finishes, but it no longer knows what it was asked, so its result says \"trip_agent: None\". Its loop history also sits in the main state, where every node can see it.",
-        code: 'return {"trip_messages": ["done"],\n        "results": ["trip_agent: " + str(task)]}',
-        anims: [], bad: ["trip20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: None"]', trip_messages: '["need tool", "tool result", "done"]' }, { results: "bad", trip_messages: "new" }, S20) },
-      { run: 4, title: "✗ STEP 4: the synthesizer runs a second time", lesson: "L20",
-        text: "route_trip now points to synthesizer, so it runs again, this time with both results. One question, two synthesizer runs. With a real LLM that is two calls, and the first one saw only half the answer.",
-        log: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: None']</b>",
-        code: 'route_trip(state)  ->  "synthesizer"',
-        anims: [{ e: "a20_trip_synth", label: "trip result" }, { e: "a20_synth_end", d: 1300 }],
-        on: ["end20"], bad: ["synth20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: None"]', trip_messages: '["need tool", "tool result", "done"]' }, {}, S20) },
-      { run: 4, title: "Summary: what went wrong", lesson: "L20 -> L21",
-        text: "The loop is wired into the main graph, so every pass through it is a separate main-graph step. Two problems: (1) trip_agent lost its task on its 2nd call, (2) the synthesizer ran twice, the first time with half the results. Tab 6 fixes both with a subgraph.",
-        code: "4 runs  |  synthesizer ran 2 times  |  trip_agent lost its task",
-        anims: [], bad: ["synth20", "trip20"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: None"]', trip_messages: '["need tool", "tool result", "done"]' }, { results: "bad", trip_messages: "bad" }, S20) },
-    ]
-  },
-  {
-    id: "l21", name: "6. L21: loop in subgraph", graph: "l21", query: "axiomcart_21.py: the same scenario, the loop moved into a subgraph",
-    steps: [
-      { run: 1, title: "STEP 1: the same two Sends", lesson: "L21",
-        text: "Same dispatch as lesson 20. The only change is inside trip_agent: its loop now runs as a subgraph.",
-        code: 'Send("hotel_agent", {"task": "hotels in Jaipur"})\nSend("trip_agent",  {"task": "3-day Jaipur plan"})',
-        anims: [{ e: "a21_start_hotel", label: "hotels in Jaipur" }, { e: "a21_start_trip", label: "3-day Jaipur plan" }],
-        on: ["start21", "hotel21", "trip21"],
-        state: st({}, {}, S21),
-        extra: { title: "What each agent receives (its Send payload)", rows: [
-          { k: "hotel_agent", v: '{"task": "hotels in Jaipur"}' },
-          { k: "trip_agent", v: '{"task": "3-day Jaipur plan"}' }] } },
-      { run: 1, title: "Inside trip_agent: the subgraph starts", lesson: "L21",
-        text: "trip_agent calls trip_subgraph.invoke(...) with its task. The subgraph has its own private state, and the task is stored there. think asks for the tool.",
-        code: 'trip_subgraph.invoke({"task": payload["task"], "messages": []})',
-        log: "think sees task = <b>'3-day Jaipur plan'</b>",
-        anims: [{ e: "a21_think_tool", label: "need tool" }], on: ["trip21", "think21", "tool21"],
-        state: st({ results: "[]  (updates are applied when STEP 1 ends)" }, {}, S21),
-        extra: { title: "trip_subgraph's private state", rows: [
-          { k: "task", v: '"3-day Jaipur plan"' },
-          { k: "messages", v: '["need tool"]', tag: "new" }] } },
-      { run: 1, title: "The loop runs inside the subgraph", lesson: "L21",
-        text: "tool goes back to think, and think still sees its task: the task is in the subgraph's state, not in a one-time payload. think answers and the subgraph ends. The main graph is still in STEP 1.",
-        code: 'def think(state: TripState):\n    state["task"]   # "3-day Jaipur plan" on every call',
-        log: "think sees task = <b>'3-day Jaipur plan'</b>",
-        anims: [{ e: "a21_tool_think", label: "tool result" }], on: ["trip21"], ok: ["think21"],
-        state: st({ results: "[]  (updates are applied when STEP 1 ends)" }, {}, S21),
-        extra: { title: "trip_subgraph's private state", rows: [
-          { k: "task", v: '"3-day Jaipur plan"', tag: "ok" },
-          { k: "messages", v: '["need tool", "tool result", "done"]', tag: "new" }] } },
-      { run: 1, title: "STEP 1 ends: both agents are done", lesson: "L21",
-        text: "The whole loop ran inside ONE main-graph step. Both results are applied together. The loop history (messages) stayed private and never reaches the main state.",
-        code: 'return {"results": ["trip_agent: " + payload["task"]]}',
-        anims: [], on: ["hotel21", "trip21"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: 3-day Jaipur plan"]' }, { results: "new" }, S21) },
-      { run: 2, title: "STEP 2: the synthesizer runs once, with both", lesson: "L21 (uses R1)",
-        text: "The join edge waits for both agents, so the synthesizer runs once and sees both answers.",
-        code: 'builder.add_edge(["hotel_agent", "trip_agent"], "synthesizer")',
-        log: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: 3-day Jaipur plan']</b>",
-        anims: [{ e: "a21_hotel_synth", label: "hotel result" }, { e: "a21_trip_synth", label: "trip result" }], ok: ["synth21"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: 3-day Jaipur plan"]' }, {}, S21),
-        extra: { title: "What the synthesizer sees", rows: [
-          { k: "results", v: "both answers, each with its real task", tag: "ok" }] } },
-      { run: 2, title: "Summary: lesson 20 vs lesson 21", lesson: "L21 -> AxiomCart",
-        text: "Moving the loop into a subgraph fixed both problems. AxiomCart does the same: product_agent and support_agent each run their model and tools loop as a subgraph (tab 3).",
-        code: "lesson 20:  4 runs  |  synthesizer 2 times  |  task lost\nlesson 21:  2 runs  |  synthesizer 1 time   |  task kept",
-        anims: [{ e: "a21_synth_end" }], on: ["end21"], ok: ["synth21", "trip21"],
-        state: st({ results: '["hotel_agent: hotels in Jaipur",\n "trip_agent: 3-day Jaipur plan"]' }, { results: "ok" }, S21) },
-    ]
   }
 ];
 
@@ -710,12 +522,6 @@ function render(live) {
   // edges
   const used = new Set((s.anims || []).map(a => a.e));
   svg.querySelectorAll(".edge").forEach(p => p.classList.toggle("lit", used.has(p.id.slice(2))));
-  // main-graph steps (STEP 1, STEP 2, ...) for the lesson graphs
-  svg.querySelectorAll(".run").forEach(r => {
-    const n = Number(r.dataset.run);
-    r.classList.toggle("on", n === s.run);
-    r.classList.toggle("done", n < s.run);
-  });
   if (graphId === "axiom") {
     for (const id of ["stt", "tts"]) {
       const n = document.getElementById("n-" + id);
@@ -746,14 +552,8 @@ function render(live) {
   const code = document.getElementById("code");
   code.textContent = s.code || ""; code.style.display = s.code ? "" : "none";
   const log = document.getElementById("log");
-  log.innerHTML = s.log ? (S.graph ? "output: " : "log: ") + s.log : ""; log.style.display = s.log ? "" : "none";
+  log.innerHTML = s.log ? "log: " + s.log : ""; log.style.display = s.log ? "" : "none";
   fillList(document.getElementById("state"), s.state);
-  const extraWrap = document.getElementById("extra-wrap");
-  if (s.extra) {
-    document.getElementById("extra-title").textContent = s.extra.title;
-    fillList(document.getElementById("extra"), s.extra.rows);
-    extraWrap.style.display = "";
-  } else extraWrap.style.display = "none";
   // controls
   document.getElementById("prev").disabled = step === 0;
   document.getElementById("next").disabled = step === S.steps.length - 1;
@@ -780,13 +580,9 @@ function togglePlay() {
   playTimer = setInterval(next, 3200);
 }
 
-// tabs (a thin divider separates the AxiomCart scenarios from the lesson 20/21 pair)
+// tabs
 const tabs = document.getElementById("tabs");
 SCENARIOS.forEach((S, i) => {
-  if (S.graph && !SCENARIOS[i - 1].graph) {
-    const sep = document.createElement("span"); sep.className = "tab-sep"; sep.setAttribute("aria-hidden", "true");
-    tabs.appendChild(sep);
-  }
   const b = document.createElement("button");
   b.type = "button"; b.className = "tab"; b.setAttribute("role", "tab"); b.id = "tab-" + S.id;
   b.textContent = S.name; b.title = S.query;
@@ -801,7 +597,7 @@ document.addEventListener("keydown", e => {
   if (e.target.closest && e.target.closest("button") && (e.key === " " || e.key === "Enter")) return;
   if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); stopPlay(); next(); }
   else if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
-  else if (["1", "2", "3", "4", "5", "6"].includes(e.key)) setScenario(Number(e.key) - 1);
+  else if (["1", "2", "3", "4"].includes(e.key)) setScenario(Number(e.key) - 1);
 });
 
 // Start on the two-agent scenario at rest, so the first frame shows the most interesting picture.
