@@ -858,7 +858,6 @@ document.addEventListener("keydown", e => {
   }
 });
 
-// Keep the class's place if the page is updated while it is open.
 function start(saved) {
   if (saved && typeof saved.cur === "number") state = { cur: saved.cur, revealed: saved.revealed || {}, picks: saved.picks || {} };
   if (ch().steps && state.revealed[ch().id]) state.revealed[ch().id] = "done";
@@ -866,8 +865,7 @@ function start(saved) {
   drawSwarm();
   render();
 }
-window.claude?.hot?.snapshot?.(() => state);
-window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+start({});
 </script>
 </body>
 </html>
