@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Would You Trust This Agent?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&family=Schibsted+Grotesk:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a meeting agenda. One story told in seven short scenes, each ending in a question;
+   the key idea from the talk appears once the learner has answered. */
+:root {
+  --bg: #eceef3;
+  --panel: #ffffff;
+  --ink: #1a1f33;
+  --muted: #5b6275;
+  --line: #ccd1dc;
+  --accent: #3552c8;
+  --accent-soft: #dfe5fb;
+  --talk: #b76a00;
+  --talk-soft: #fbecd4;
+  --ok: #23774b;
+  --ok-soft: #d9efe2;
+  --risk: #c0392b;
+  --risk-soft: #fae1dd;
+  --font-display: "Schibsted Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10131c; --panel: #181d2a; --ink: #e5e8f1; --muted: #9aa1b5; --line: #2f3648;
+    --accent: #8aa0ff; --accent-soft: #232c4c; --talk: #f0a640; --talk-soft: #3a2a12;
+    --ok: #5cc98a; --ok-soft: #173426; --risk: #ff7a68; --risk-soft: #3d1f1b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10131c; --panel: #181d2a; --ink: #e5e8f1; --muted: #9aa1b5; --line: #2f3648;
+  --accent: #8aa0ff; --accent-soft: #232c4c; --talk: #f0a640; --talk-soft: #3a2a12;
+  --ok: #5cc98a; --ok-soft: #173426; --risk: #ff7a68; --risk-soft: #3d1f1b;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.55 var(--font-body); }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 18px 20px 28px; display: grid; gap: 16px; }
+
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px 24px; }
+h1 { font: 800 38px/1.05 var(--font-display); margin: 0; letter-spacing: -0.5px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 64ch; }
+
+.agenda { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.agenda button { text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 8px 10px; cursor: pointer; display: grid; gap: 1px; }
+.agenda .n { font: 600 12px var(--font-mono); color: var(--muted); }
+.agenda .l { font-weight: 700; font-size: 14px; line-height: 1.25; }
+.agenda button.now { border-color: var(--accent); background: var(--accent-soft); }
+.agenda button.done .n { color: var(--ok); }
+
+.scene { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; display: grid; gap: 16px; }
+.scene-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+.kicker { font: 600 13px var(--font-mono); color: var(--muted); letter-spacing: 0.5px; }
+.scene h2 { font: 800 30px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+.story { margin: 0; max-width: 70ch; }
+.story b { font-weight: 700; }
+.ask { border-left: 5px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; padding: 12px 16px; font: 700 21px/1.35 var(--font-display); }
+.ask small { display: block; font: 400 14px var(--font-body); color: var(--muted); margin-top: 4px; }
+
+/* widgets */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.job { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; background: var(--bg); }
+.job .name { font-weight: 700; }
+.job .meta { font-size: 14px; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 10px; font-size: 13px; cursor: pointer; }
+.seg button.on { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.seg button.on.risk { background: var(--risk); border-color: var(--risk); }
+.seg button.on.ok { background: var(--ok); border-color: var(--ok); }
+
+.steps { display: grid; gap: 8px; }
+.steprow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bg); }
+.steprow .no { font: 800 20px var(--font-display); color: var(--muted); }
+.steprow .what { display: grid; }
+.steprow .what span { font-size: 14px; color: var(--muted); }
+.mix { display: flex; height: 14px; border-radius: 7px; overflow: hidden; border: 1px solid var(--line); }
+.mix i { display: block; transition: flex 0.4s; }
+.mix .code { background: var(--ok); }
+.mix .llm { background: var(--accent); }
+.mixlabel { font-size: 14px; color: var(--muted); }
+
+.trace { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.trace .row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 70px; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 14px; align-items: start; }
+.trace .row:first-child { border-top: 0; background: var(--bg); font: 600 12px var(--font-mono); color: var(--muted); letter-spacing: 0.5px; }
+.trace .row .who { font: 600 13px var(--font-mono); }
+.trace .row .ms { font: 13px var(--font-mono); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.trace .row.flag { background: var(--talk-soft); }
+.trace .row { animation: rise 0.35s ease-out both; }
+
+.inbox { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.inbox-head { display: flex; justify-content: space-between; padding: 10px 14px; background: var(--bg); font-weight: 700; }
+.inbox-head span { font: 600 13px var(--font-mono); color: var(--muted); }
+.mail { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; padding: 12px 14px; border-top: 1px solid var(--line); align-items: center; transition: opacity 0.3s; }
+.mail .subj { font-weight: 700; }
+.mail .body { font-size: 14px; color: var(--muted); }
+.mail .kind { font: 600 11px var(--font-mono); letter-spacing: 0.6px; text-transform: uppercase; color: var(--talk); }
+.mail.handled { opacity: 0.5; }
+.mail .res { font: 600 13px var(--font-mono); color: var(--ok); }
+
+.opts { display: grid; gap: 6px; }
+.opt { text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 12px; cursor: pointer; display: flex; gap: 10px; align-items: baseline; }
+.opt .l { font: 600 13px var(--font-mono); color: var(--muted); }
+.opt.right { border-color: var(--ok); background: var(--ok-soft); }
+.opt.wrong { border-color: var(--risk); background: var(--risk-soft); }
+.opt:disabled { cursor: default; }
+.verdict { font-size: 15px; font-weight: 700; }
+.verdict.ok { color: var(--ok); }
+.verdict.no { color: var(--risk); }
+.reveal-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 9px; padding: 9px 16px; font-weight: 700; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.btn.talkbtn { background: var(--talk); border-color: var(--talk); color: var(--panel); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.hint { font-size: 14px; color: var(--muted); }
+
+.talk { border-radius: 12px; background: var(--talk-soft); padding: 16px 18px; display: grid; gap: 10px; animation: rise 0.4s ease-out both; }
+.talk .tag { font: 600 12px var(--font-mono); letter-spacing: 1px; text-transform: uppercase; color: var(--talk); }
+.talk p { margin: 0; max-width: 72ch; }
+.talk .quote { font: 700 20px/1.35 var(--font-display); }
+.bridge { border-top: 1px dashed var(--talk); padding-top: 10px; display: grid; gap: 4px; }
+.bridge b { color: var(--talk); }
+.followups { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.nav { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+footer { color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+footer a { color: var(--accent); }
+kbd { font: 12px var(--font-mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel); }
+
+@media (max-width: 900px) {
+  .agenda { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  h1 { font-size: 30px; }
+  .steprow { grid-template-columns: 24px minmax(0, 1fr); }
+  .steprow .seg { grid-column: 2; }
+  .trace .row { grid-template-columns: 90px minmax(0, 1fr); }
+  .trace .row .ms { display: none; }
+}
+@media (max-width: 480px) { .agenda { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Would you trust this agent?</h1>
+      <p class="lede">Our billing agent fixed claim A1029 in the demo. Now the clinic wants to use it for real. Seven short scenes. In each one, answer the question, then read the key idea.</p>
+    </div>
+  </header>
+
+  <nav class="agenda" id="agenda" aria-label="Scenes"></nav>
+
+  <section class="scene" id="scene" aria-live="polite"></section>
+
+  <footer>
+    <span>Keys: <kbd>→</kbd> next, <kbd>←</kbd> back</span>
+    <span>Based on <a href="https://www.youtube.com/watch?v=kTnfJszFxCg">"3 ingredients for building reliable enterprise agents"</a>, Harrison Chase, AI Engineer World's Fair 2025. Northstar Health Plan is fictional.</span>
+  </footer>
+</div>
+
+<script>
+// ---- Scenes ------------------------------------------------------------------
+// Each scene: a bit of story, one question (multiple choice or one choice per item), then the key
+// idea from the talk and the link back to what we built this week, shown once the learner answers.
+const SCENES = [
+  { id: "open", label: "Monday morning",
+    title: "The demo worked. Now the clinic wants it on Monday.",
+    story: "Last class, our agent read the Northstar policy and prepared a corrected claim for <b>A1029</b> in under a minute. The billing manager loved it. The compliance officer did not. Her words: <i>\"It's impressive. I still won't let it touch real claims.\"</i>",
+    ask: "Who is right?", askSub: "Choose one answer.",
+    mcq: { opts: ["The billing manager: it worked, so use it", "The compliance officer: it is too risky", "Both: it is useful, but it needs limits first"], right: 2 },
+    talk: { quote: "Most agents never get past the demo. The question is not \"can it do the task?\" but \"is it worth the risk?\"",
+      text: "People weigh three things, often without saying so: how valuable the work is when the agent gets it right, how likely it is to get it right, and how bad it is when it gets it wrong. Every scene today pulls on one of those three.",
+      bridge: "Both are right. The rest of the session is about turning the compliance officer's \"no\" into a \"yes, if\".",
+      follow: ["What would make you say yes to an agent touching your own team's work?"] } },
+
+  { id: "value", label: "Which job first?", widget: "jobs",
+    title: "Four jobs the clinic could give the agent. Which one first?",
+    story: "The billing team spends its week on four kinds of work. Each could be handed to an agent. Tag each job: <b>start here</b>, <b>later</b>, or <b>never alone</b>.",
+    ask: "Which job would you start with, and why that one?", askSub: "For each job, choose one: Start here, Later or Never alone. There is no single right answer.",
+    talk: { quote: "Pick work that is valuable when it goes right, and give the agent more of it, not less.",
+      text: "Give agents substantial work, such as legal drafting or long research, rather than quick one-line answers. Longer tasks are where an agent saves real hours. But value only counts if the cost of a mistake is bearable, which is why refunds sit in a different box than drafting.",
+      follow: ["Why is \"answer where's-my-claim calls\" less exciting, even though it is easier?", "What would have to change before \"pay refunds\" could move out of \"never alone\"?"] } },
+
+  { id: "spectrum", label: "Code or LLM?", widget: "spectrum",
+    title: "Which steps should the LLM decide, and which should be plain code?",
+    story: "Fixing a denied claim takes five steps. For each, choose: <b>fixed code</b> (the same every time) or <b>LLM decides</b> (flexible, but can surprise you).",
+    ask: "Where would you draw the line?", askSub: "For each step, choose Fixed code or LLM decides. The bar shows your mix.",
+    talk: { quote: "It's not workflows OR agents. It's workflows AND agents.",
+      text: "A prompt that works most of the time is not reliable enough for steps that must always happen the same way. Put those steps in code, and let the LLM handle the parts that need judgment. A good framework lets you choose your spot on that line, one step at a time.",
+      bridge: "<b>In our course:</b> AxiomCart is exactly this mix. The graph's edges, the reducer and the orchestrator's structured output are fixed. Inside each agent's subgraph the LLM decides which tool to call and when to stop.",
+      follow: [] } },
+
+  { id: "trust", label: "The review meeting", widget: "trace",
+    title: "Compliance wants to know what the agent actually did.",
+    story: "The clinic sets up a review meeting. The compliance officer asks one question: <i>\"When it says the phone authorization is valid, how do I know it didn't make that up?\"</i> You can describe the prompt. Or you can show this.",
+    ask: "What would convince her: a better prompt, or a record of every step?", askSub: "Choose one answer. Then look at the record of the run.",
+    mcq: { opts: ["A better prompt", "A record of every step the agent took", "A promise that the model is accurate"], right: 1 },
+    talk: { quote: "Showing the traces ended the review meeting early.",
+      text: "One team faced a review panel that was worried about their agent. They showed the traces, every LLM call and tool call with its input and output, and the meeting finished ahead of time. People trust what they can inspect. Evaluations then turn \"it looked right once\" into \"it is right 47 times out of 50\".",
+      bridge: "<b>Next week:</b> this is what LangSmith shows.",
+      follow: ["What would you want to see in a trace of your own project?", "Is one good trace enough? What would you need before go-live?"] } },
+
+  { id: "cost", label: "When it's wrong", widget: "actions",
+    title: "Some mistakes you can undo. Some you can't.",
+    story: "The agent can do six things. For each, decide how much freedom it gets: <b>just do it</b>, or <b>ask a person first</b>.",
+    ask: "Which actions need a person, and what makes them different?", askSub: "For each action, choose one: Just do it, or Ask a person first.",
+    talk: { quote: "Make the mistake cheap: draft, don't send. Open a pull request, don't merge to main.",
+      text: "Two ways to lower the cost of being wrong. Make actions reversible: one coding tool saves a version on every file change, so anything can be rolled back. And put a human at the points that matter: the agent prepares, a person approves. Research agents return a report instead of emailing it to a client.",
+      bridge: "<b>In our course:</b> Q6 on the agent page, where it didn't submit without access. In code: <code>interrupt()</code> pauses for a human, and <code>escalate_to_human</code> hands over. Anything that leaves the clinic gets \"ask a person first\".",
+      follow: ["\"Email the patient\" looks harmless. Why do many teams still put a person on it?", "Can you make \"submit to portal\" reversible instead of approved? What would that need?"] } },
+
+  { id: "ambient", label: "Nobody is chatting", widget: "inbox",
+    title: "37 denials arrived overnight. Nobody typed a question.",
+    story: "In real use nobody chats with the agent. Denial notices arrive from Northstar, and each one starts the agent on its own. By morning it has worked most of them. A few need a person. They wait here.",
+    ask: "Is this agent autonomous? Where are the humans?", askSub: "Handle each item in the inbox: click one button per item.",
+    talk: { quote: "Ambient does not mean fully autonomous.",
+      text: "These are ambient agents: started by events, not by a chat message. They can take on bigger, slower jobs, because nobody is waiting on a reply. But people stay in the loop through an agent inbox: approve or reject an action, edit what the agent wants to do, answer its question when it is stuck, or rewind to an earlier step and try again.",
+      follow: ["What happens to the claims waiting in the inbox if nobody opens it for a week?", "Which item would you never let the agent decide alone, and why?"] } },
+
+  { id: "close", label: "Back to Monday",
+    title: "So, can the agent touch real claims on Monday?",
+    story: "Think back to your answer in scene 1. Then answer the compliance officer's question again, with everything from today.",
+    ask: "What would you tell her now?", askSub: "Choose one answer.",
+    mcq: { opts: ["Yes: it can run on its own from Monday", "No: agents are not ready for real claims", "Yes, if: it drafts, we can see every step, and a person approves anything that leaves the clinic"], right: 2 },
+    talk: { quote: "Give it work worth doing, make it right more often, and make it cheap when it is wrong.",
+      text: "A common shape works across law, writing and code: the agent produces a strong first draft of something substantial, and a person reviews it at the moments that matter. That is the \"yes, if\" the compliance officer can accept.",
+      bridge: "<b>Homework:</b> watch the video linked at the bottom of this page, then answer for your own project: what is the cost when it's wrong, and what one change would make that cost smaller?",
+      follow: ["Which of today's ideas will you add to your own project this week?"] } },
+];
+
+// ---- Widget data ---------------------------------------------------------------
+const JOBS = [
+  { name: "Answer \"where is my claim?\" calls", meta: "Many per day, simple lookups, low value each" },
+  { name: "Fix denied claims like A1029", meta: "Many steps, real money, output is a draft" },
+  { name: "Write appeal letters for review", meta: "Long writing task, a person reads every letter" },
+  { name: "Pay refunds to patients", meta: "Money leaves the clinic, hard to take back" },
+];
+const JOB_TAGS = [["start", "Start here", "ok"], ["later", "Later", ""], ["never", "Never alone", "risk"]];
+
+const STEPS = [
+  { what: "Read the denial code", why: "CO-197 always means the same thing" },
+  { what: "Find the right policy section", why: "Policies are long and worded differently" },
+  { what: "Decide the fix", why: "Corrected claim, appeal letter, or retro-auth?" },
+  { what: "Check the required fields", why: "The policy lists exactly which fields" },
+  { what: "Submit to the portal", why: "Same API call every time" },
+];
+
+const TRACE = [
+  { who: "orchestrator", what: "Classified: denial fix, needs policy + claim data", ms: 640 },
+  { who: "read_policy", what: "query \"phone authorization\" returned section 2: \"A phone reference number counts as a valid authorization number.\"", ms: 210, flag: true },
+  { who: "llm", what: "Auth PA-55821 (phone, Sept 10) is before the MRI (Sept 15): valid", ms: 1180 },
+  { who: "read_policy", what: "query \"CO-197 appeal\" returned section 3: corrected claim, no letter", ms: 190 },
+  { who: "draft_claim", what: "Corrected claim A1029 with auth PA-55821; patient name, CPT missing", ms: 95 },
+];
+
+const ACTIONS = [
+  { name: "Read the policy", meta: "Read-only" },
+  { name: "Draft the corrected claim", meta: "Stays inside the clinic" },
+  { name: "Save the draft in the billing system", meta: "Old version is kept" },
+  { name: "Email the patient about the denial", meta: "Leaves the clinic" },
+  { name: "Submit the claim to the Northstar portal", meta: "Leaves the clinic, starts the insurer's clock" },
+  { name: "Issue a refund", meta: "Money leaves the clinic" },
+];
+const ACTION_TAGS = [["run", "Just do it", "ok"], ["ask", "Ask a person first", "risk"]];
+
+const MAILS = [
+  { kind: "Approve", subj: "A1029: corrected claim ready to submit", body: "Auth PA-55821 added. Patient name and CPT code filled in by the front desk.", acts: ["Approve", "Edit", "Reject"] },
+  { kind: "Answer", subj: "A2201: denied CO-197, no authorization on file", body: "The agent asks: \"Was prior auth ever obtained? If not, retro-auth is only possible within 14 days of service.\"", acts: ["Auth was obtained", "Never obtained"] },
+  { kind: "Review", subj: "A1187: appeal letter drafted", body: "Retro-authorization request with clinical notes attached. 1 page.", acts: ["Approve", "Edit", "Rewind to step 2"] },
+];
+
+// ---- State ---------------------------------------------------------------------
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let state = { cur: 0, mcq: {}, jobs: {}, steps: {}, actions: {}, mails: {} };
+
+function h(tag, cls, html) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html !== undefined) n.innerHTML = html;
+  return n;
+}
+
+// ---- Agenda --------------------------------------------------------------------
+function renderAgenda() {
+  const ag = document.getElementById("agenda");
+  ag.replaceChildren();
+  SCENES.forEach((s, i) => {
+    const b = h("button", i === state.cur ? "now" : (i < state.cur ? "done" : ""), `<span class="n">Scene ${i + 1}</span><span class="l">${s.label}</span>`);
+    b.type = "button";
+    if (i === state.cur) b.setAttribute("aria-current", "step");
+    b.addEventListener("click", () => go(i));
+    ag.append(b);
+  });
+}
+
+// ---- Widgets -------------------------------------------------------------------
+function tagRow(tags, current, onPick) {
+  const seg = h("div", "seg");
+  tags.forEach(([key, label, tone]) => {
+    const b = h("button", (current === key ? "on " : "") + tone, label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", current === key ? "true" : "false");
+    b.addEventListener("click", () => onPick(current === key ? undefined : key));
+    seg.append(b);
+  });
+  return seg;
+}
+
+function widgetJobs() {
+  const box = h("div", "cards");
+  JOBS.forEach((j, i) => {
+    const c = h("div", "job");
+    c.append(h("div", "name", j.name), h("div", "meta", j.meta),
+      tagRow(JOB_TAGS, state.jobs[i], v => { state.jobs[i] = v; renderScene(); }));
+    box.append(c);
+  });
+  return box;
+}
+
+function widgetSpectrum() {
+  const wrap = h("div", "steps");
+  let code = 0, llm = 0;
+  STEPS.forEach((s, i) => {
+    const v = state.steps[i];
+    if (v === "code") code++;
+    if (v === "llm") llm++;
+    const row = h("div", "steprow");
+    row.append(h("div", "no", String(i + 1)), h("div", "what", `<b>${s.what}</b><span>${s.why}</span>`),
+      tagRow([["code", "Fixed code", "ok"], ["llm", "LLM decides", ""]], v, val => { state.steps[i] = val; renderScene(); }));
+    wrap.append(row);
+  });
+  const left = STEPS.length - code - llm;
+  const mix = h("div", "mix");
+  mix.innerHTML = `<i class="code" style="flex:${code}"></i><i class="llm" style="flex:${llm}"></i><i style="flex:${left}"></i>`;
+  wrap.append(mix, h("div", "mixlabel", `Your mix: ${code} fixed code, ${llm} LLM decides${left ? ", " + left + " still open" : ""}.`));
+  return wrap;
+}
+
+function widgetTrace() {
+  const wrap = h("div", "");
+  const t = h("div", "trace");
+  t.append(h("div", "row", "<span>STEP</span><span>INPUT AND OUTPUT</span><span>TIME</span>"));
+  TRACE.forEach((r, i) => {
+    const row = h("div", "row" + (r.flag ? " flag" : ""), `<span class="who">${r.who}</span><span>${r.what}</span><span class="ms">${r.ms} ms</span>`);
+    row.style.animationDelay = (i * 0.15) + "s";
+    t.append(row);
+  });
+  wrap.append(t, h("p", "hint", "Highlighted: the line from the policy that the agent's answer rests on. The compliance officer can check it herself. (Sample record.)"));
+  return wrap;
+}
+
+function widgetActions() {
+  const box = h("div", "cards");
+  ACTIONS.forEach((a, i) => {
+    const c = h("div", "job");
+    c.append(h("div", "name", a.name), h("div", "meta", a.meta),
+      tagRow(ACTION_TAGS, state.actions[i], v => { state.actions[i] = v; renderScene(); }));
+    box.append(c);
+  });
+  return box;
+}
+
+function widgetInbox() {
+  const box = h("div", "inbox");
+  const left = MAILS.filter((_, i) => !state.mails[i]).length;
+  box.append(h("div", "inbox-head", `Agent inbox <span>34 handled overnight · ${left} waiting for you</span>`));
+  MAILS.forEach((m, i) => {
+    const row = h("div", "mail" + (state.mails[i] ? " handled" : ""));
+    const text = h("div", "", `<div class="kind">${m.kind}</div><div class="subj">${m.subj}</div><div class="body">${m.body}</div>`);
+    row.append(text);
+    if (state.mails[i]) row.append(h("div", "res", "✓ " + state.mails[i]));
+    else {
+      const seg = h("div", "seg");
+      m.acts.forEach(a => {
+        const b = h("button", "", a); b.type = "button";
+        b.addEventListener("click", () => { state.mails[i] = a; renderScene(); });
+        seg.append(b);
+      });
+      row.append(seg);
+    }
+    box.append(row);
+  });
+  return box;
+}
+
+function widgetMcq(sc) {
+  const box = h("div", "opts");
+  const pick = state.mcq[sc.id];
+  sc.mcq.opts.forEach((o, i) => {
+    const b = h("button", "opt", `<span class="l">${"ABC"[i]}</span><span>${o}</span>`);
+    b.type = "button";
+    if (pick !== undefined) {
+      b.disabled = true;
+      if (i === sc.mcq.right) b.classList.add("right");
+      else if (i === pick) b.classList.add("wrong");
+    }
+    b.addEventListener("click", () => { state.mcq[sc.id] = i; renderScene(); });
+    box.append(b);
+  });
+  if (pick !== undefined) {
+    const ok = pick === sc.mcq.right;
+    box.append(h("div", "verdict " + (ok ? "ok" : "no"), ok ? "Correct." : `Not quite. The best answer is ${"ABC"[sc.mcq.right]}.`));
+  }
+  return box;
+}
+
+function countAnswered(obj, total) {
+  let n = 0;
+  for (let i = 0; i < total; i++) if (obj[i]) n++;
+  return n;
+}
+
+// How many items the learner has answered in this scene, out of how many.
+function progress(sc) {
+  if (sc.mcq) return [state.mcq[sc.id] === undefined ? 0 : 1, 1];
+  if (sc.widget === "jobs") return [countAnswered(state.jobs, JOBS.length), JOBS.length];
+  if (sc.widget === "spectrum") return [countAnswered(state.steps, STEPS.length), STEPS.length];
+  if (sc.widget === "actions") return [countAnswered(state.actions, ACTIONS.length), ACTIONS.length];
+  if (sc.widget === "inbox") return [countAnswered(state.mails, MAILS.length), MAILS.length];
+  return [1, 1];
+}
+
+const WIDGETS = { jobs: widgetJobs, spectrum: widgetSpectrum, trace: widgetTrace, actions: widgetActions, inbox: widgetInbox };
+
+// ---- Scene -------------------------------------------------------------------------
+function renderScene() {
+  const s = SCENES[state.cur];
+  const el = document.getElementById("scene");
+  el.replaceChildren();
+  const head = h("div", "scene-head");
+  head.append(h("span", "kicker", `Scene ${state.cur + 1} of ${SCENES.length}`));
+  el.append(head, h("h2", "", s.title), h("p", "story", s.story), h("div", "ask", `${s.ask}<small>${s.askSub}</small>`));
+  if (s.mcq) el.append(widgetMcq(s));
+  const [done, total] = progress(s);
+  const answered = done >= total;
+  if (s.widget && (!s.mcq || answered)) el.append(WIDGETS[s.widget]());
+
+  if (!answered) {
+    el.append(h("p", "hint", total === 1 ? "Choose an answer to see the key idea." : `Answered ${done} of ${total}. Answer all of them to see the key idea.`));
+  } else {
+    const t = h("div", "talk");
+    t.append(h("div", "tag", "Key idea"), h("p", "quote", s.talk.quote), h("p", "", s.talk.text));
+    if (s.talk.bridge) t.append(h("div", "bridge", `<p>${s.talk.bridge}</p>`));
+    if (s.talk.follow.length) {
+      const ul = h("ul", "followups");
+      s.talk.follow.forEach(f => ul.append(h("li", "", f)));
+      t.append(h("div", "tag", "Think about"), ul);
+    }
+    el.append(t);
+  }
+
+  const nav = h("div", "nav");
+  const back = h("button", "btn", "Back"); back.type = "button"; back.disabled = state.cur === 0;
+  back.addEventListener("click", () => go(state.cur - 1));
+  const next = h("button", "btn primary", state.cur === SCENES.length - 1 ? "Start again" : "Next scene");
+  next.type = "button";
+  next.addEventListener("click", () => go(state.cur === SCENES.length - 1 ? 0 : state.cur + 1));
+  nav.append(back, next);
+  el.append(nav);
+}
+
+
+function go(i) {
+  if (i < 0 || i >= SCENES.length) return;
+  state.cur = i;
+  renderAgenda();
+  renderScene();
+  window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+}
+
+document.addEventListener("keydown", e => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.key === "ArrowRight") { e.preventDefault(); if (state.cur < SCENES.length - 1) go(state.cur + 1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); go(state.cur - 1); }
+});
+
+// Keep the room's place if the page is updated while it is open.
+function start(saved) {
+  if (saved && typeof saved.cur === "number") state = Object.assign(state, saved);
+  renderAgenda();
+  renderScene();
+}
+window.claude?.hot?.snapshot?.(() => state);
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
