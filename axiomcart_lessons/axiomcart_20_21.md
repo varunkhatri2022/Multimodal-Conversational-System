@@ -6,8 +6,10 @@ after that step. Animated version: [axiomcart_20_21_flow.html](axiomcart_20_21_f
 
 Watch lesson 20 for two problems:
 
-- **A. The synthesizer runs too early, and then again.** hotel_agent takes 1 step, trip_agent's loop
-  takes 3. The synthesizer runs each time a branch reaches it.
+- **A. The synthesizer runs too early.** Both lessons use the same join edge,
+  `add_edge(["hotel_agent", "trip_agent"], "synthesizer")`. A join waits for each agent to **run once**,
+  not for its loop to **finish**. trip_agent runs once in step 1 (to ask for the tool), so the join
+  fires in step 2 with only the hotel result. The trip result arrives in step 3, after the answer.
 - **B. trip_agent forgets its task.** A `Send` payload is the input for ONE call. The loop comes back
   through a normal edge, which passes the main state, and the main state has no `task`.
 
@@ -31,7 +33,7 @@ In one line: **a subgraph turns the whole loop into ONE step of the main graph.*
 │   trip_messages = ["need tool"]                                                     │
 │   (no "task" key: the task was only in trip_agent's Send payload)                   │
 └──────────────────┬───────────────────────────────────────────────┬──────────────────┘
-                   │                                               │ route_trip → "tool"
+                   │ join: both agents ran once                    │ route_trip → "tool"
                    ▼                                               ▼
             ┌─────────────┐                                 ┌─────────────┐
   STEP 2    │ synthesizer │                                 │    tool     │
@@ -57,13 +59,9 @@ In one line: **a subgraph turns the whole loop into ONE step of the main graph.*
 │ STATE after step 3                                                                  │
 │   results       = ["hotel_agent: hotels in Jaipur", "trip_agent: None"]             │
 │   trip_messages = ["need tool", "tool result", "done"]                              │
+│   ✗ PROBLEM A: the trip result arrives AFTER the synthesizer already answered       │
 └──────────────────────────────────────────────────────────────────┬──────────────────┘
-                                                                   │ route_trip → "synthesizer"
-                                                                   ▼
-                                                            ┌─────────────┐
-  STEP 4                                                    │ synthesizer │
-                                                            └──────┬──────┘
-                                                                   │  ✗ PROBLEM A again: runs AGAIN
+                                                                   │ route_trip → END
                                                                    ▼
                                                                   END
 ```
@@ -93,6 +91,7 @@ In one line: **a subgraph turns the whole loop into ONE step of the main graph.*
 │   results = ["hotel_agent: hotels in Jaipur", "trip_agent: 3-day Jaipur plan"]      │
 │   ✓ both agents finished in ONE step   ✓ trip_agent kept its task                   │
 └──────────────────────────────────────────┬──────────────────────────────────────────┘
+                                           │ join: both agents ran once
                                            ▼
                                     ┌─────────────┐
   STEP 2                            │ synthesizer │

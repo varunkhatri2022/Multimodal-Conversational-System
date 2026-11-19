@@ -1,0 +1,4 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}\\axiomcart-ai-assistant\\.venv\\Scripts\\python.exe",
+    "python.useEnvironmentsExtension": false
+}
