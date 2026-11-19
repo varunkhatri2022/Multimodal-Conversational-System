@@ -119,7 +119,7 @@ svg.finished { opacity: 0.45; transition: opacity 0.3s; }
     <h1>Lesson 20 vs Lesson 21: where does the tool loop live?</h1>
     <p class="sub">Same question, same agents, two graphs. One Next button moves both, lined up by main-graph STEP. Watch the left side for two problems:</p>
     <div class="problems">
-      <span class="prob" id="probA"><b>A</b> &nbsp;synthesizer runs too early (and twice)</span>
+      <span class="prob" id="probA"><b>A</b> &nbsp;synthesizer runs too early</span>
       <span class="prob" id="probB"><b>B</b> &nbsp;trip_agent forgets its task</span>
     </div>
   </header>
@@ -135,9 +135,9 @@ svg.finished { opacity: 0.45; transition: opacity 0.3s; }
     <section class="pane">
       <div class="pane-head">
         <h3>Lesson 20 <span>loop in the main graph</span></h3>
-        <div class="runs" id="runs20"><span class="run">STEP 1</span><span class="run">STEP 2</span><span class="run">STEP 3</span><span class="run">STEP 4</span></div>
+        <div class="runs" id="runs20"><span class="run">STEP 1</span><span class="run">STEP 2</span><span class="run">STEP 3</span></div>
       </div>
-      <svg id="svg20" viewBox="0 0 560 360" role="img" aria-label="Lesson 20: START sends to hotel_agent and trip_agent; trip_agent loops through tool in the main graph; both lead to the synthesizer, then END.">
+      <svg id="svg20" viewBox="0 0 560 360" role="img" aria-label="Lesson 20: START sends to hotel_agent and trip_agent; trip_agent loops through tool in the main graph; a join edge waits for both agents before the synthesizer, then END.">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8f99aa"/></marker>
           <marker id="arrow-lit" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563d6"/></marker>
@@ -151,7 +151,8 @@ svg.finished { opacity: 0.45; transition: opacity 0.3s; }
         <path class="edge" id="e-l20_trip_tool" d="M165,258 L165,290"/>
         <path class="edge" id="e-l20_tool_trip" d="M205,290 L205,258"/>
         <path class="edge" id="e-l20_synth_end" d="M500,170 L512,170"/>
-        <text class="elabel" x="330" y="244">route_trip</text>
+        <text class="elabel" x="265" y="280">route_trip</text>
+        <text class="note plain" x="435" y="130" text-anchor="middle">join: waits for both</text>
         <text class="note bad" x="275" y="317">loop wired into the MAIN graph</text>
         <g class="g-node start" id="n-l20_start"><circle cx="40" cy="170" r="16"/><text x="40" y="173">START</text></g>
         <g class="g-node" id="n-l20_hotel"><rect x="95" y="50" width="190" height="58" rx="8"/><text x="190" y="74">hotel_agent</text><text class="m" x="190" y="96">task = 'hotels in Jaipur'</text></g>
@@ -257,7 +258,7 @@ const MOMENTS = [
     note: "The right graph is still in STEP 1. The left graph already ended STEP 1 and is waiting to start STEP 2.",
     seen: [],
     l20: { run: 1, anims: [], on: [], task: TASK,
-           caption: "(waiting) The tool is a separate main-graph node, so it can only run in STEP 2.",
+           caption: "(waiting) STEP 1 is over. Next step for hotel_agent: synthesizer (the join sees both agents ran once). Next step for trip_agent: tool.",
            state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + "]" }, { k: "trip_messages", v: '["need tool"]' }] }] },
     l21: { run: 1, anims: [{ e: "l21_tool_think", label: "tool result" }], on: ["l21_trip"], ok: ["l21_think"], task: TASK, taskTone: "ok",
            caption: "tool goes back to think. think still knows its task, writes the answer, and the subgraph ends. Both agents return, and STEP 1 ends.",
@@ -265,12 +266,12 @@ const MOMENTS = [
            state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]', tag: "new" }] },
                    { title: "Subgraph's private state", rows: [{ k: "task", v: '"3-day Jaipur plan"', tag: "ok" }, { k: "messages", v: '["need tool", "tool result", "done"]', tag: "new" }] }] } },
 
-  { title: "STEP 2, problem A: the synthesizer runs too early",
-    note: "Left: hotel_agent finished, so its edge fires the synthesizer, even though trip_agent is still mid-loop. Right: both agents finished in STEP 1, so the synthesizer sees both results.",
+  { title: "STEP 2, problem A: synthesizer and tool run at the same time",
+    note: "Both sides use the same join edge. A join waits for each agent to RUN once, not for its loop to FINISH. Left: hotel_agent → synthesizer and trip_agent → tool, both in STEP 2. trip_agent's first run (\"need tool\") counted for the join, so the synthesizer starts while the tool is still working. Right: trip_agent's one run included the whole loop, so the synthesizer sees both results.",
     prob: "A", seen: [],
-    l20: { run: 2, anims: [{ e: "l20_hotel_synth", label: "hotel" }, { e: "l20_trip_tool", label: "need tool" }],
+    l20: { run: 2, anims: [{ e: "l20_hotel_synth", label: "hotel" }, { e: "l20_trip_synth", label: "ran once" }, { e: "l20_trip_tool", label: "need tool" }],
            on: ["l20_tool"], bad: ["l20_synth"], task: TASK, tone: "bad",
-           caption: "✗ PROBLEM A: synthesizer runs with only the hotel result. The tool runs at the same time.",
+           caption: "STEP 2 runs two nodes at once: hotel_agent → synthesizer (join) and trip_agent → tool (route_trip). ✗ PROBLEM A: synthesizer sees only the hotel result.",
            out: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur']</b>",
            state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + "]", tag: "bad" }, { k: "trip_messages", v: '["need tool", "tool result"]', tag: "new" }] }] },
     l21: { run: 2, anims: [{ e: "l21_hotel_synth", label: "hotel" }, { e: "l21_trip_synth", label: "trip" }, { e: "l21_synth_end", d: 1300 }],
@@ -283,28 +284,17 @@ const MOMENTS = [
     note: "The task came in the Send payload, and a Send payload is the input for ONE call only. Now tool → trip_agent is a normal edge, so trip_agent gets the main state, and the main state has no \"task\" key.",
     prob: "B", seen: ["A"],
     l20: { run: 3, anims: [{ e: "l20_tool_trip", label: "tool result" }], bad: ["l20_trip"], task: "task = None", taskTone: "bad", tone: "bad",
-           caption: "✗ PROBLEM B: trip_agent runs again with task = None, and answers \"trip_agent: None\".",
+           caption: "✗ PROBLEM B: trip_agent runs again with task = None, and answers \"trip_agent: None\". ✗ A: that answer arrives after the synthesizer already ran, so nobody uses it. route_trip → END.",
            out: "trip_agent sees task = <b>None</b>",
            state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: None"]', tag: "bad" }, { k: "trip_messages", v: '["need tool", "tool result", "done"]', tag: "new" }] }] },
     l21: { finished: true, run: 2, task: TASK, tone: "ok", caption: "Finished in STEP 2. Inside the subgraph, task is part of its own state, so think saw it on both visits.",
            state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]' }] }] } },
 
-  { title: "STEP 4, problem A again: the synthesizer runs a second time",
-    note: "One question, two synthesizer runs on the left. With a real LLM, that is two calls, and the first one saw only half the answer.",
-    prob: "A", seen: ["B"],
-    l20: { run: 4, anims: [{ e: "l20_trip_synth", label: "trip: None" }, { e: "l20_synth_end", d: 1300 }],
-           on: ["l20_end"], bad: ["l20_synth"], task: "task = None", taskTone: "bad", tone: "bad",
-           caption: "✗ PROBLEM A: route_trip now points to synthesizer, so it runs again.",
-           out: "synthesizer runs with <b>['hotel_agent: hotels in Jaipur', 'trip_agent: None']</b>",
-           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: None"]' }, { k: "trip_messages", v: '["need tool", "tool result", "done"]' }] }] },
-    l21: { finished: true, run: 2, task: TASK, tone: "ok", caption: "Finished in STEP 2.",
-           state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: 3-day Jaipur plan"]' }] }] } },
-
   { title: "Summary: a subgraph turns the whole loop into ONE step of the main graph",
-    note: "A: on the left, every turn of the loop is a new STEP, so the hotel edge fires the synthesizer in between. B: the loop comes back through a normal edge, which carries no Send payload. On the right, the loop runs inside one node call, with the task in its own state. AxiomCart's product and support agents work like the right side.",
+    note: "A: on the left, every turn of the loop is a new STEP, and the join fires after trip_agent's first run, before the loop is done. B: the loop comes back through a normal edge, which carries no Send payload. On the right, the loop runs inside one node call, with the task in its own state. AxiomCart's product and support agents work like the right side.",
     seen: ["A", "B"],
-    l20: { run: 4, bad: ["l20_synth", "l20_trip"], task: "task = None", taskTone: "bad", tone: "bad",
-           caption: "4 STEPs  |  A: synthesizer ran 2 times  |  B: task lost",
+    l20: { run: 3, bad: ["l20_synth", "l20_trip"], task: "task = None", taskTone: "bad", tone: "bad",
+           caption: "3 STEPs  |  A: synthesizer ran without the trip result  |  B: task lost",
            state: [{ title: "Main state", rows: [{ k: "results", v: "[" + HOTEL + ',\n "trip_agent: None"]', tag: "bad" }, { k: "trip_messages", v: '["need tool", "tool result", "done"]' }] }] },
     l21: { run: 2, ok: ["l21_synth", "l21_trip"], task: TASK, taskTone: "ok", tone: "ok",
            caption: "2 STEPs  |  A: synthesizer ran 1 time  |  B: task kept",

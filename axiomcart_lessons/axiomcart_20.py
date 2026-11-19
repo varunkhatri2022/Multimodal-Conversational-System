@@ -4,8 +4,10 @@
 #   hotel_agent -> answers right away         (1 step)
 #   trip_agent  -> calls a tool, then answers (a loop: trip_agent -> tool -> trip_agent)
 #
-# The loop is wired into the MAIN graph. Watch for two problems:
-#   A. synthesizer runs TWICE: first with only the hotel result.
+# The loop is wired into the MAIN graph, and a join edge waits for both agents.
+# Watch for two problems:
+#   A. synthesizer runs too EARLY, with only the hotel result. The join waits for
+#      trip_agent to RUN once, not for its loop to FINISH.
 #   B. trip_agent's 2nd call has lost its task (the Send payload is for the 1st call only).
 # axiomcart_21.py is the same scenario, fixed with a subgraph.
 
@@ -49,7 +51,7 @@ def tool(state: State) -> dict:
 def route_trip(state: State) -> str:
     if state["trip_messages"][-1] == "need tool":
         return "tool"
-    return "synthesizer"
+    return END  # loop done (the join edge below already sent us to synthesizer)
 
 
 def synthesizer(state: State) -> dict:
@@ -63,17 +65,18 @@ builder.add_node("trip_agent", trip_agent)
 builder.add_node("tool", tool)
 builder.add_node("synthesizer", synthesizer)
 builder.add_conditional_edges(START, dispatch, ["hotel_agent", "trip_agent"])
-builder.add_edge("hotel_agent", "synthesizer")
-builder.add_conditional_edges("trip_agent", route_trip, ["tool", "synthesizer"])
+builder.add_edge(["hotel_agent", "trip_agent"], "synthesizer")  # join: wait for both agents
+builder.add_conditional_edges("trip_agent", route_trip, ["tool", END])
 builder.add_edge("tool", "trip_agent")  # the loop lives in the main graph
 builder.add_edge("synthesizer", END)
 graph = builder.compile()
 
 
 if __name__ == "__main__":
-    graph.invoke({"results": [], "trip_messages": []})
+    final = graph.invoke({"results": [], "trip_messages": []})
+    print("  final results:", final["results"])
     # Expected:
     #   trip_agent sees task = '3-day Jaipur plan'
-    #   synthesizer runs with ['hotel_agent: hotels in Jaipur']           <- too early, half the answer
-    #   trip_agent sees task = None                                       <- forgot its task
-    #   synthesizer runs with ['hotel_agent: ...', 'trip_agent: None']    <- runs again
+    #   synthesizer runs with ['hotel_agent: hotels in Jaipur']     <- too early, half the answer
+    #   trip_agent sees task = None                                 <- forgot its task
+    #   final results: ['hotel_agent: ...', 'trip_agent: None']     <- trip result came AFTER the answer
